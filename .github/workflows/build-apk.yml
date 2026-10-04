@@ -37,7 +37,7 @@ jobs:
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       - run: |
           keytool -genkeypair -v -keystore autohustle.jks -alias autohustle -keyalg RSA -keysize 2048 -validity 10000 -storepass autohustle123 -keypass autohustle123 -dname "CN=AutoHustle, OU=Mechanic, O=AutoHustle, L=Petersburg, ST=IL, C=US"
-          $ANDROID_HOME/build-tools/33.0.2/apksigner sign --ks autohustle.jks --ks-pass pass:autohustle123 --key-pass pass:autohustle123 --ks-key-alias autohustle --out AutoHustle_AIMechanic.apk android/app/build/outputs/apk/debug/app-debug.apk
+          $(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)apksigner sign --ks autohustle.jks --ks-pass pass:autohustle123 --key-pass pass:autohustle123 --ks-key-alias autohustle --out AutoHustle_AIMechanic.apk android/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: AutoHustle_AIMechanic_APK
