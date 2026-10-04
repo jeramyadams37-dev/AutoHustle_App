@@ -1,0 +1,34 @@
+{
+  "franchise_location": "Springfield_001",
+  "currency": "USD",
+  "subscription": {
+    "name": "The Pit Crew Pass",
+    "price": 29.99,
+    "features": [
+      "Free Monthly Diagnostic",
+      "Fluid Top-offs Included",
+      "15% Off All Labor",
+      "Priority 'Fast Lane' Booking"
+    ]
+  },
+  "services": [
+    {
+      "id": "s1",
+      "name": "Gig-Speed Oil Change",
+      "price": 49.99,
+      "description": "Synthetic blend. Done in 15 mins."
+    },
+    {
+      "id": "s2",
+      "name": "Brake Pad Swap (Front)",
+      "price": 119.00,
+      "description": "Ceramic pads. Rotors inspected."
+    },
+    {
+      "id": "s3",
+      "name": "Alternator Test & Swap",
+      "price": 180.00,
+      "description": "Includes battery health check."
+    }
+  ]
+}
