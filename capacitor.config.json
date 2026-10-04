@@ -1,6 +1,6 @@
 {
-  "appId": "com.atothei.autohustle",
-  "appName": "AutoHustle AI",
+  "appId": "com.autohustle.aimechanic",
+  "appName": "Auto-Hustle AI Mechanic",
   "webDir": "dist",
-  "plugins": { "CapacitorHttp": { "enabled": true } }
+  "bundledWebRuntime": false
 }
