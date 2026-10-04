@@ -14,26 +14,43 @@ function getKey() {
 
 async function gen(prompt, json = false) {
   const key = getKey();
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: json ? { responseMimeType: 'application/json' } : {},
-      }),
+  const models = [...new Set([getModel(), 'gemini-3.5-flash', 'gemini-3.5-flash-lite'])];
+  let lastErr;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let res, data;
+      try {
+        res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: json ? { responseMimeType: 'application/json' } : {},
+            }),
+          }
+        );
+        data = await res.json().catch(() => ({}));
+      } catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 1500)); continue; }
+      if (res.ok) {
+        const text = (data.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
+        if (text) return text;
+        lastErr = new Error('Empty response from Gemini.');
+        continue;
+      }
+      const msg = data?.error?.message || `Gemini error ${res.status}`;
+      if (/api key/i.test(msg) || res.status === 401 || res.status === 403) {
+        localStorage.removeItem('gemini_key');
+        throw new Error(msg);
+      }
+      lastErr = new Error(msg);
+      if ([429, 500, 503, 504].includes(res.status)) { await new Promise((r) => setTimeout(r, 1500)); continue; }
+      if (res.status === 404) break;
+      throw lastErr;
     }
-  );
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data?.error?.message || `Gemini error ${res.status}`;
-    if (/api key/i.test(msg) || res.status === 401 || res.status === 403) localStorage.removeItem('gemini_key');
-    throw new Error(msg);
   }
-  const text = (data.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
-  if (!text) throw new Error('Empty response from Gemini.');
-  return text;
+  throw lastErr || new Error('Gemini request failed.');
 }
 
 function parseJson(text) {
