@@ -105,13 +105,8 @@ export default function TicketDetail() {
   })();
 
   const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try { await navigator.share({ title: `Auto-Hustle Ticket — ${ticket.vehicle_summary}`, url }); } catch {}
-    } else {
-      navigator.clipboard?.writeText(url);
-      toast({ title: 'Link copied', description: 'Ticket link copied to clipboard.' });
-    }
+    try { await exportTicketPDF(ticket); }
+    catch (e) { toast({ title: 'Could not share PDF', description: e.message, variant: 'destructive' }); }
   };
 
   return (
@@ -121,7 +116,7 @@ export default function TicketDetail() {
           <ArrowLeft size={18} /> Back
         </button>
         <div className="flex gap-2">
-          <button onClick={() => exportTicketPDF(ticket)} className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-primary/40">
+          <button onClick={handleShare} className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-primary/40">
             <Download size={16} /> PDF
           </button>
           <button onClick={handleShare} className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-primary/40">
