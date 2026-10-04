@@ -17,7 +17,7 @@ jobs:
           npm install
           npm install @capacitor/core @capacitor/preferences @capacitor/app
           npm install -D @capacitor/cli @capacitor/android
-      - run: mkdir -p dist && cp -r index.html style.css manifest.json js images data src dist/
+      - run: mkdir -p dist && cp -r index.html style.css manifest.json js images data src dist/ || true
       - run: |
           npx cap add android || true
           npx cap copy android
