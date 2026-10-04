@@ -19,17 +19,8 @@ jobs:
           npx cap copy android
           npx cap update android
       - run: |
-          sudo apt-get update && sudo apt-get install -y imagemagick
-          cat << 'SVGEOF' > icon.svg
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><defs><radialGradient id="bgGrad" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#18181b" /><stop offset="100%" stop-color="#09090b" /></radialGradient></defs><rect width="512" height="512" rx="115" fill="url(#bgGrad)" stroke="#27272a" stroke-width="6" /><path d="M256 52 L436 156 L436 356 L256 460 L76 356 L76 156 Z" fill="#121215" stroke="#3f3f46" stroke-width="12" stroke-linejoin="round" /><circle cx="256" cy="256" r="126" fill="none" stroke="#f97316" stroke-width="10" stroke-dasharray="28 14" opacity="0.9" /><g transform="translate(140, 140)"><path d="M185 35 L205 55 L85 175 C75 185 55 185 45 175 C35 165 35 145 45 135 L165 15 Z" fill="#f97316" /><path d="M55 45 L175 165 C185 175 185 195 175 205 C165 215 145 215 135 205 L15 85 Z" fill="#ea580c" opacity="0.85" /><circle cx="116" cy="116" r="18" fill="#121215" stroke="#f97316" stroke-width="6" /></g></svg>
-          SVGEOF
-          RES_DIR="android/app/src/main/res"
-          declare -A SIZES=( ["mipmap-mdpi"]=48 ["mipmap-hdpi"]=72 ["mipmap-xhdpi"]=96 ["mipmap-xxhdpi"]=144 ["mipmap-xxxhdpi"]=192 )
-          for DIR in "${!SIZES[@]}"; do
-            mkdir -p "$RES_DIR/$DIR"
-            convert -background none icon.svg -resize "${SIZES[$DIR]}x${SIZES[$DIR]}" "$RES_DIR/$DIR/ic_launcher.png"
-            convert -background none icon.svg -resize "${SIZES[$DIR]}x${SIZES[$DIR]}" "$RES_DIR/$DIR/ic_launcher_round.png"
-          done
+          cp -r icons/* android/app/src/main/res/
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       - run: |
           [ -f autohustle.jks ] || keytool -genkeypair -v -keystore autohustle.jks -alias autohustle -keyalg RSA -keysize 2048 -validity 10000 -storepass autohustle123 -keypass autohustle123 -dname "CN=AutoHustle, OU=Mechanic, O=AutoHustle, L=Petersburg, ST=IL, C=US"
