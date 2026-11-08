@@ -1,0 +1,1 @@
+{"capacitor":{"android":{"src":"android"}},"description":"Native Capacitor plugin for AutoHustle v10: classic Bluetooth SPP to an ELM327 OBD2 adapter. Local plugin — the Java source lives here, not in npm.","name":"@autohustle/obd2","private":true,"version":"1.0.0"}
