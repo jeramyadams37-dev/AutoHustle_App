@@ -15,7 +15,7 @@ export function getBackendUrl() {
   const saved = localStorage.getItem('backend_url');
   if (saved) return saved.replace(/\/$/, '');
   // Local dev server (server.ts) when the app is served from localhost.
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port !== '' && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) {
     return 'http://localhost:3000';
   }
   return CLOUD_RUN_URL;
