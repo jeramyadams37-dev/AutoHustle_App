@@ -91,7 +91,11 @@ export async function exportTicketPDF(ticket) {
     d.safety_warnings.forEach((w) => line(`⚠ ${w.title}: ${w.text}`, 10, 'bold', [220, 38, 38]));
   }
 
-  const name = `auto-hustle-ticket-${(ticket.id || 'ticket').slice(0, 8)}.pdf`;
+  const dt = new Date(ticket.created_date || Date.now());
+  const ymd = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const veh = String(h.vehicle_summary || ticket.vehicle_summary || 'ticket').split(',')[0]
+    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'ticket';
+  const name = `${veh}_${ymd}.pdf`;
   if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
     try {
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
