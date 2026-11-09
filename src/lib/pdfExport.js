@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 
 // Builds a clean text-based PDF of the full shop ticket.
-export function exportTicketPDF(ticket) {
+export async function exportTicketPDF(ticket) {
   const d = ticket.ticket_data || {};
   const h = d.header || {};
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -91,5 +91,18 @@ export function exportTicketPDF(ticket) {
     d.safety_warnings.forEach((w) => line(`⚠ ${w.title}: ${w.text}`, 10, 'bold', [220, 38, 38]));
   }
 
-  doc.save(`auto-hustle-ticket-${(ticket.id || 'ticket').slice(0, 8)}.pdf`);
+  const name = `auto-hustle-ticket-${(ticket.id || 'ticket').slice(0, 8)}.pdf`;
+  if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
+    try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
+      const { Share } = await import('@capacitor/share');
+      const data = doc.output('datauristring').split(',')[1];
+      const f = await Filesystem.writeFile({ path: name, data, directory: Directory.Cache });
+      await Share.share({ title: name, url: f.uri, dialogTitle: 'Save or print ticket' });
+    } catch (e) {
+      if (!String(e?.message || e).toLowerCase().includes('cancel')) alert('PDF export failed: ' + (e?.message || e));
+    }
+    return;
+  }
+  doc.save(name);
 }
