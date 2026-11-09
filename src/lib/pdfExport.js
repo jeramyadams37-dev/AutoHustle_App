@@ -13,6 +13,10 @@ export async function exportTicketPDF(ticket) {
     doc.setFont('helvetica', style);
     doc.setFontSize(size);
     doc.setTextColor(...color);
+    text = String(text)
+      .replace(/⚠\uFE0F?\s*SAFETY:/g, 'SAFETY:')
+      .replace(/⚠\uFE0F?\s*/g, 'WARNING: ')
+      .replace(/\s*\[Torque:\s*(N\/?A|none|-|—)?\s*\]/gi, '');
     const wrapped = doc.splitTextToSize(text, W - 72);
     wrapped.forEach((w) => {
       if (y > 760) { doc.addPage(); y = 48; }
