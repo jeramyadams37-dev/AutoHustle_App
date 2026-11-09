@@ -203,7 +203,6 @@ public class Obd2Plugin extends Plugin {
 
             disconnectQuietly();
             socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
-            socket.setSoTimeout(SOCKET_TIMEOUT_MS);
             socket.connect();
             out = socket.getOutputStream();
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -417,19 +416,22 @@ public class Obd2Plugin extends Plugin {
      */
     private String sendCommand(String command, int timeoutMs) throws IOException {
         requireConnection();
-        socket.setSoTimeout(timeoutMs);
         out.write((command + "\r").getBytes());
         out.flush();
-
         StringBuilder response = new StringBuilder();
         long deadline = System.currentTimeMillis() + timeoutMs;
         int ch;
         while (System.currentTimeMillis() < deadline) {
-            try {
-                ch = in.read();
-            } catch (java.net.SocketTimeoutException e) {
-                break;
+            if (!in.ready()) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                continue;
             }
+            ch = in.read();
             if (ch == -1) {
                 break;
             }
