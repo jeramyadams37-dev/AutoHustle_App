@@ -15,9 +15,9 @@ const entity = (name) => ({
       rows.sort((a, b) => (a[key] > b[key] ? 1 : a[key] < b[key] ? -1 : 0) * (desc ? -1 : 1));
     }
     if (opts.limit) rows = rows.slice(0, opts.limit);
-    return rows;
+    return { items: rows, total: rows.length };
   },
-  async count(query = {}) { return (await this.filter(query)).length; },
+  async count(query = {}) { return (await this.filter(query)).items.length; },
   async get(id) {
     const row = read(name).find((r) => r.id === id);
     if (!row) throw new Error(`${name} not found`);
