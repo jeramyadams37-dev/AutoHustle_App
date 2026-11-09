@@ -81,15 +81,16 @@ export default function Flowchart({ flowchart, currentId }) {
           const fill = isOutcome ? '#3f1d1d' : isActive ? '#2a1a0c' : '#211b16';
           const stroke = isOutcome ? '#ef4444' : isActive ? '#f97316' : '#3f3530';
           const label = (n.label || n.question || '').slice(0, 90);
+          const cut = label.length > 22 ? (label.lastIndexOf(' ', 22) > 8 ? label.lastIndexOf(' ', 22) : 22) : label.length;
           return (
             <g key={id}>
               <rect x={p.x - NODE_W / 2} y={p.y} width={NODE_W} height={NODE_H} rx={10} fill={fill} stroke={stroke} strokeWidth={isActive ? 2.6 : 1.6} />
               <text x={p.x} y={p.y + 20} textAnchor="middle" fontSize={11} fontWeight={700} fill={isOutcome ? '#fca5a5' : '#fed7aa'} fontFamily="'Barlow Condensed', sans-serif">
-                {isOutcome ? '✓ ' : ''}{label.slice(0, 22)}
+                {isOutcome ? '✓ ' : ''}{label.slice(0, cut)}
               </text>
               {label.length > 22 && (
                 <text x={p.x} y={p.y + 35} textAnchor="middle" fontSize={9} fill="#a8a29e" fontFamily="Inter, sans-serif">
-                  {label.slice(22, 44)}
+                  {label.slice(cut, cut + 24).trim()}
                 </text>
               )}
               {isActive && <text x={p.x} y={p.y + NODE_H - 6} textAnchor="middle" fontSize={8} fontWeight={700} fill="#f97316" fontFamily="Inter, sans-serif">YOU ARE HERE</text>}

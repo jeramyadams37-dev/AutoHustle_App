@@ -27,7 +27,7 @@ export default function ChecklistItem({ id, title, subtitle, expected, checked, 
             <input
               value={value || ''}
               onChange={(e) => onLog(id, e.target.value)}
-              placeholder="Log measured value (e.g. 12.4V)"
+              placeholder="Notes or measured value (optional)"
               className="flex-1 bg-zinc-950 border border-border rounded-lg px-2.5 py-1.5 text-xs text-mono outline-none focus:border-primary"
             />
             {value && (

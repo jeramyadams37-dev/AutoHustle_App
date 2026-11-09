@@ -1,6 +1,5 @@
 import { Hammer, ShieldAlert, Layers } from 'lucide-react';
 import ChecklistItem from './ChecklistItem';
-import RepairStepDiagram from './RepairStepDiagram';
 import SafetyVisual from '@/components/diagrams/SafetyVisual';
 
 function SectionTitle({ icon: Icon, children }) {
@@ -27,7 +26,8 @@ export default function Module2({ data, progress, onToggle, onLog, warnings = []
             <span className="font-display font-semibold uppercase tracking-wide text-sm">{phase.name}</span>
           </div>
           <div className="p-3 space-y-3">
-            {phase.steps.map((step) => {
+            {phase.steps.map((rawStep) => {
+              const step = { ...rawStep, torque_spec: /^\s*n\/?a\s*$/i.test(rawStep.torque_spec || '') ? '' : rawStep.torque_spec };
               const w = step.safety_warning ? warnById[step.safety_warning] || { id: step.safety_warning, title: 'Safety Warning', text: step.safety_warning } : null;
               return (
                 <div key={step.id} className="space-y-2">
@@ -50,7 +50,7 @@ export default function Module2({ data, progress, onToggle, onLog, warnings = []
                     </div>
                   )}
                   {w && <SafetyVisual warning={w} />}
-                  <RepairStepDiagram step={step} />
+                  
                 </div>
               );
             })}

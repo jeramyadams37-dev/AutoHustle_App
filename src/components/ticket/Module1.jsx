@@ -46,6 +46,7 @@ export default function Module1({ data, progress, onToggle, onLog, rerank, onRer
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-amber-300/80 mt-2">AI-generated specs. Verify torque values in a service manual before tightening.</p>
         </div>
       )}
 
