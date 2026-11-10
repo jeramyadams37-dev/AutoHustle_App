@@ -131,7 +131,7 @@ async function startServer() {
 Find current typical US retail prices (USD) for each item below, and the typical hourly labor rate for an independent auto repair shop near ZIP ${zip}, plus a realistic labor-hours range for this repair.
 Return ONLY a JSON object, no markdown:
 {"items":[{"name":"","low":0,"high":0,"source":"","url":""}],"labor":{"hours_low":0,"hours_high":0,"rate_low":0,"rate_high":0,"rate_source":""}}
-Rules: use null for any number you could not find, never guess. Only give a url that appeared in your search results. Keep item names exactly as given.
+Rules: give a realistic typical US retail price range for each item even if the exact part is not listed - use the closest equivalent part for this vehicle and note that in the source field. Use null only if you truly cannot estimate. Only give a url that appeared in your search results. Keep item names exactly as given.
 ${list}`;
       const genAI = getClient();
       if (!genAI) throw new Error('Gemini API key is not configured on the server.');
