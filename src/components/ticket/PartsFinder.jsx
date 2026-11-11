@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Phone, Navigation, Search, Loader2 } from 'lucide-react';
 import { getBackendUrl } from '@/lib/gemini';
 
@@ -10,11 +10,11 @@ const norm = (s) => String(s || '').toLowerCase().replace(/\s*x\d+$/, '').trim()
 const money = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : `$${Number(n).toFixed(2)}`);
 const qty = (q) => parseInt(q, 10) || 1;
 
-export default function PartsFinder({ vehicle, repair, parts = [] }) {
+export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
   const [zip, setZip] = useState(store.get('ah_zip'));
   const [rate, setRate] = useState(store.get('ah_rate'));
   const [hours, setHours] = useState(store.get('ah_hours'));
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => { try { return JSON.parse(store.get(`ah_parts_${ticketId}`) || 'null')?.data || null; } catch { return null; } });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const validZip = /^\d{5}$/.test(zip);
@@ -48,6 +48,10 @@ export default function PartsFinder({ vehicle, repair, parts = [] }) {
   const h1 = myHours || L.hours_low, h2 = myHours || L.hours_high;
   const lLow = r1 != null && h1 != null ? r1 * h1 : null;
   const lHigh = r2 != null && h2 != null ? r2 * h2 : null;
+  useEffect(() => {
+    if (!data || !ticketId) return;
+    store.set(`ah_parts_${ticketId}`, JSON.stringify({ data, zip, savedAt: Date.now(), totals: { pLow, pHigh, lLow, lHigh, h1, h2, r1, r2, mine: !!(myRate || myHours) } }));
+  }, [data, rate, hours]);
   const input = 'bg-zinc-950 border border-border rounded-lg px-2.5 py-2 text-sm text-mono outline-none focus:border-primary w-full';
 
   return (

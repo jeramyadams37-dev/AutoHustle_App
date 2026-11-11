@@ -173,7 +173,7 @@ export default function TicketDetail() {
           <Module4 data={d} />
         </TabsContent>
         <TabsContent value="parts" className="mt-4">
-          <><PartsList parts={d.parts_list} partsState={partsState} onTogglePart={onTogglePart} /><PartsFinder vehicle={d.header?.vehicle_summary || ticket.vehicle_summary} repair={d.header?.title || d.header?.system_focus || ''} parts={d.parts_list || []} /></>
+          <><PartsList parts={d.parts_list} partsState={partsState} onTogglePart={onTogglePart} /><PartsFinder ticketId={ticket.id} vehicle={d.header?.vehicle_summary || ticket.vehicle_summary} repair={d.header?.title || d.header?.system_focus || ''} parts={d.parts_list || []} /></>
         </TabsContent>
         <TabsContent value="chat" className="mt-4">
           <ChatPanel ticket={ticket} />

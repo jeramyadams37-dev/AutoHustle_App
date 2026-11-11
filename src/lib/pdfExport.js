@@ -95,6 +95,31 @@ export async function exportTicketPDF(ticket) {
     d.safety_warnings.forEach((w) => line(`⚠ ${w.title}: ${w.text}`, 10, 'bold', [220, 38, 38]));
   }
 
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(`ah_parts_${ticket.id}`) : null;
+    const pr = raw ? JSON.parse(raw) : null;
+    if (pr && pr.data) {
+      const m = (n) => (n == null || Number.isNaN(Number(n)) ? '-' : `$${Number(n).toFixed(2)}`);
+      const clean = (x) => String(x).replace(/[\u2000-\u200B\u202F\u00A0]/g, ' ').replace(/[\u2013\u2014]/g, '-');
+      const t = pr.totals || {};
+      gap(10);
+      line('PARTS, STORES & LABOR ESTIMATE', 12, 'bold', [249, 115, 22]);
+      line(`Searched ${new Date(pr.savedAt).toLocaleDateString()} for ZIP ${pr.zip}. Estimates from web search, not quotes. Call the store to confirm.`, 9, 'normal', [120, 113, 108]);
+      (pr.data.items || []).forEach((i) => line(`  ${clean(i.name)}: ${m(i.low)} - ${m(i.high)}${i.source ? ` (${clean(i.source)})` : ''}`, 10));
+      line(`Parts total (tools excluded): ${m(t.pLow)} - ${m(t.pHigh)}`, 10, 'bold');
+      if (t.h1 != null && t.r1 != null) line(`Labor: ${t.h1}${t.h2 !== t.h1 ? `-${t.h2}` : ''} hr at $${t.r1}${t.r2 !== t.r1 ? `-${t.r2}` : ''}/hr = ${m(t.lLow)} - ${m(t.lHigh)}${t.mine ? ' (your rate/hours)' : ''}`, 10, 'bold');
+      line(`Estimated total: ${m((t.pLow || 0) + (t.lLow || 0))} - ${m((t.pHigh || 0) + (t.lHigh || 0))}`, 11, 'bold');
+      if ((pr.data.stores || []).length) {
+        gap(4);
+        line('Nearby parts stores:', 11, 'bold');
+        pr.data.stores.forEach((s) => {
+          line(`  ${clean(s.name)} - ${clean(s.address)}`, 10, 'bold');
+          line(`    Phone: ${s.phone || 'n/a'}`, 10);
+          if (s.hours && s.hours.length) line(`    Hours: ${clean(s.hours.join(' | '))}`, 9, 'normal', [120, 113, 108]);
+        });
+      }
+    }
+  } catch (e) { /* skip pricing section if unreadable */ }
   const dt = new Date(ticket.created_date || Date.now());
   const ymd = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   const veh = String(h.vehicle_summary || ticket.vehicle_summary || 'ticket').split(',')[0]
