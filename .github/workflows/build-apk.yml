@@ -57,6 +57,9 @@ jobs:
       # the Play Store). Previously the upload step expected only the signed
       # file, so a run without secrets failed at upload instead of returning
       # the debug APK.
+      - name: Install app icon
+        run: cp -r icon/res/. android/app/src/main/res/
+
       - name: Prepare APK artifact
         run: |
           if [ -f AutoHustle-v10.apk ]; then
