@@ -30,6 +30,9 @@ jobs:
             convert -background none icon.svg -resize "${SIZES[$DIR]}x${SIZES[$DIR]}" "$RES_DIR/$DIR/ic_launcher.png"
             convert -background none icon.svg -resize "${SIZES[$DIR]}x${SIZES[$DIR]}" "$RES_DIR/$DIR/ic_launcher_round.png"
           done
+      - name: Install app icon
+        run: cp -r icon/res/. android/app/src/main/res/
+
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       # Release signing: the keystore must be supplied by Jeramy as GitHub
       # Actions secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
@@ -57,9 +60,6 @@ jobs:
       # the Play Store). Previously the upload step expected only the signed
       # file, so a run without secrets failed at upload instead of returning
       # the debug APK.
-      - name: Install app icon
-        run: cp -r icon/res/. android/app/src/main/res/
-
       - name: Prepare APK artifact
         run: |
           if [ -f AutoHustle-v10.apk ]; then
