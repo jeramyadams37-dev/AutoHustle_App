@@ -6,6 +6,8 @@ on:
 jobs:
   build-android-apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,3 +77,18 @@ jobs:
             AutoHustle-v10.apk
             AutoHustle-v10-debug.apk
           if-no-files-found: error
+
+      # Publish the signed APK as a public GitHub Release so drivers can
+      # download it directly (no Play Store). Only runs when the signed
+      # APK exists (i.e. the signing secrets were set).
+      - name: Publish a GitHub Release with the signed APK
+        if: hashFiles('AutoHustle-v10.apk') != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0-${{ github.run_number }}
+          name: AutoHustle v1.0-${{ github.run_number }}
+          files: AutoHustle-v10.apk
+          body: |
+            AutoHustle — the AI mechanic app for drivers.
+            Install the APK on Android (allow install from this source when asked).
+            Plus $10/mo and Pro $30/mo unlock in the app after subscribing with the same email as your AutoHustle account.
