@@ -21,6 +21,7 @@ import Garage from '@/pages/Garage';
 import Codes from '@/pages/Codes';
 import Scan from '@/pages/Scan';
 import PreShift from '@/pages/PreShift';
+import Subscribe from '@/pages/Subscribe';
 import ApiKeys from '@/pages/ApiKeys';
 
 const AuthenticatedApp = () => {
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
           <Route path="/codes" element={<Codes />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/pre-shift" element={<PreShift />} />
+          <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/settings" element={<ApiKeys />} />
         </Route>
       </Route>

@@ -11,6 +11,7 @@ import Module2 from '@/components/ticket/Module2';
 import Module3 from '@/components/ticket/Module3';
 import Module4 from '@/components/ticket/Module4';
 import PartsList from '@/components/ticket/PartsList';
+import TierGate from '@/components/TierGate';
 import PartsFinder from '@/components/ticket/PartsFinder';
 import ChatPanel from '@/components/ticket/ChatPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -173,7 +174,9 @@ export default function TicketDetail() {
           <Module4 data={d} />
         </TabsContent>
         <TabsContent value="parts" className="mt-4">
-          <><PartsList parts={d.parts_list} partsState={partsState} onTogglePart={onTogglePart} /><PartsFinder ticketId={ticket.id} vehicle={d.header?.vehicle_summary || ticket.vehicle_summary} repair={d.header?.title || d.header?.system_focus || ''} parts={d.parts_list || []} /></>
+          <><PartsList parts={d.parts_list} partsState={partsState} onTogglePart={onTogglePart} /><TierGate required="plus" feature="Prices, Stores & Labor">
+  <PartsFinder ticketId={ticket.id} vehicle={d.header?.vehicle_summary || ticket.vehicle_summary} repair={d.header?.title || d.header?.system_focus || ''} parts={d.parts_list || []} />
+</TierGate></>
         </TabsContent>
         <TabsContent value="chat" className="mt-4">
           <ChatPanel ticket={ticket} />

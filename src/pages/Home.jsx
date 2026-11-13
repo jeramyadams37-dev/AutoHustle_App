@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wrench, PlusCircle, SearchCode, Car, ArrowRight, Zap, ListChecks, MessageSquare, Bluetooth, ClipboardCheck, KeyRound } from 'lucide-react';
+import { Wrench, PlusCircle, SearchCode, Car, ArrowRight, Zap, ListChecks, MessageSquare, Bluetooth, ClipboardCheck, KeyRound, Crown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 export default function Home() {
@@ -66,6 +66,11 @@ export default function Home() {
               <Car size={20} className="text-primary" />
               <span className="font-display font-semibold uppercase text-sm tracking-wide">My Garage</span>
               <span className="text-xs text-muted-foreground">{stats.vehicles} vehicles · {stats.tickets} tickets</span>
+            </Link>
+            <Link to="/subscribe" className="tap-target col-span-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-1 hover:border-amber-500/60 transition">
+              <Crown size={20} className="text-primary" />
+              <span className="font-display font-semibold uppercase text-sm tracking-wide">Subscribe — Plus / Pro</span>
+              <span className="text-xs text-muted-foreground">Plus $10/mo · Pro $30/mo — unlock PartsFinder and more</span>
             </Link>
             <Link to="/settings" className="tap-target col-span-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-1 hover:border-amber-500/60 transition">
               <KeyRound size={20} className="text-primary" />

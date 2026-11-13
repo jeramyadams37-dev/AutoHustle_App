@@ -17,6 +17,7 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
+import { getSubscriptionForEmail } from './server/subscriptions.js';
 import { requireGeminiKey } from './server/byok.js';
 import { findStoresOSM } from './server/osmStores.js';
 
@@ -134,6 +135,28 @@ ${list}`;
     } catch (error) {
       console.error('Parts error:', error.message || error);
       res.status(500).json({ error: error.message || 'Parts lookup failed' });
+    }
+  });
+
+  // Subscription tier check — live Stripe lookup, no stored data.
+  // GET /api/subscription?email=user@example.com
+  // -> { tier: 'free'|'plus'|'pro', status, current_period_end, email }
+  // 400 without an email, 503 when STRIPE_SECRET_KEY is not set on the
+  // backend (never a free unlock by accident, never a crash).
+  app.get('/api/subscription', async (req, res) => {
+    try {
+      const email = String(req.query.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'email is required' });
+      }
+      const out = await getSubscriptionForEmail(email);
+      res.json(out);
+    } catch (error) {
+      if (error && error.message === 'STRIPE_NOT_CONFIGURED') {
+        return res.status(503).json({ error: 'subscriptions_not_configured', message: 'Set STRIPE_SECRET_KEY on the backend to enable subscription checks.' });
+      }
+      console.error('Subscription check error:', error.message || error);
+      res.status(502).json({ error: 'stripe_error' });
     }
   });
 
