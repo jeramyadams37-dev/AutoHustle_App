@@ -32,8 +32,8 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", returnTo);
+  const handleGoogle = async () => {
+    try { await base44.auth.loginWithProvider("google", returnTo); } catch (err) { setError(err.message || "Google sign-in is not available."); }
   };
 
   return (

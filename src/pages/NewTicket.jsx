@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Car, Plus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import NoKeyNotice from '@/components/NoKeyNotice';
 
 const empty = { year: '', make: '', model: '', trim: '', engine: '', mileage: '' };
 
@@ -152,7 +153,7 @@ export default function NewTicket() {
             />
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && (String(error).includes('API Keys') || String(error).includes('missing_gemini_key') ? <NoKeyNotice /> : <p className="text-sm text-red-400">{error}</p>)}
 
           <button
             onClick={submit}

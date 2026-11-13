@@ -30,7 +30,7 @@ export default function Register() {
     setLoading(true);
     try {
       await base44.auth.register({ email, password });
-      setShowOtp(true);
+      window.location.href = safeReturnTo();
     } catch (err) {
       setError(err.message || "Registration failed");
     } finally {
@@ -67,8 +67,8 @@ export default function Register() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", safeReturnTo());
+  const handleGoogle = async () => {
+    try { await base44.auth.loginWithProvider("google", safeReturnTo()); } catch (err) { setError(err.message || "Google sign-in is not available."); }
   };
 
   if (showOtp) {

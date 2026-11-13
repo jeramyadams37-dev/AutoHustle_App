@@ -1,6 +1,7 @@
 // Standalone replacement for the Base44 SDK: data lives on-device, AI calls go
 // to the AutoHustle backend (see src/lib/gemini.js) — never directly to Gemini.
 import { invokeFunction } from '@/lib/gemini';
+import { getSessionUser, getCurrentAccount, createAccount, signIn, signOut } from '@/lib/accounts';
 
 const read = (name) => { try { return JSON.parse(localStorage.getItem('ah_' + name)) || []; } catch { return []; } };
 const write = (name, rows) => localStorage.setItem('ah_' + name, JSON.stringify(rows));
@@ -38,20 +39,23 @@ const entity = (name) => ({
   async delete(id) { write(name, read(name).filter((r) => r.id !== id)); return { id }; },
 });
 
-const localUser = { id: 'local', email: 'local@device', full_name: 'Mechanic', role: 'user' };
-const noAuth = async () => { throw new Error('Login is not used in this standalone app.'); };
+// (localUser removed by BYOK: auth now comes from src/lib/accounts.js)
+const noAuth = async () => { throw new Error('Not available in this version.'); };
 
 export const base44 = {
   entities: { Ticket: entity('Ticket'), Vehicle: entity('Vehicle') },
   functions: { invoke: invokeFunction },
   app: { getPublicSettings: async () => ({ id: 'local', public_settings: {} }) },
   auth: {
-    me: async () => localUser,
-    isAuthenticated: async () => true,
-    logout: () => {},
+    me: async () => getSessionUser(),
+    isAuthenticated: async () => !!getCurrentAccount(),
+    logout: () => { signOut(); },
     redirectToLogin: () => {},
     setToken: () => {},
-    loginWithProvider: noAuth, loginViaEmailPassword: noAuth, register: noAuth, verifyOtp: noAuth,
+    loginWithProvider: async () => { throw new Error('Google sign-in is not available. Create an account with email and password.'); },
+    loginViaEmailPassword: async (email, password) => { await signIn(email, password); },
+    register: async ({ email, password }) => { const u = await createAccount({ email, password }); return { user: u }; },
+    verifyOtp: noAuth,
     resendOtp: noAuth, resetPasswordRequest: noAuth, resetPassword: noAuth,
   },
 };

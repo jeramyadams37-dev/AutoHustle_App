@@ -17,6 +17,8 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
+import { requireGeminiKey } from './server/byok.js';
+import { findStoresOSM } from './server/osmStores.js';
 
 const MODEL = 'gemini-3-flash-preview';
 const PORT = process.env.PORT || 3000;
@@ -26,15 +28,14 @@ async function startServer() {
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
 
-  const getClient = () => {
-    const apiKey = process.env.GEMINI_API_KEY;
+  const getClient = (apiKey) => {
     if (!apiKey) return null;
     return new GoogleGenAI({ apiKey });
   };
 
-  const generate = async (prompt, json = false) => {
-    const genAI = getClient();
-    if (!genAI) throw new Error('Gemini API key is not configured on the server.');
+  const generate = async (prompt, json = false, apiKey) => {
+    const genAI = getClient(apiKey);
+    if (!genAI) throw new Error('MISSING_GEMINI_KEY');
     const response = await genAI.models.generateContent({
       model: MODEL,
       contents: [{ parts: [{ text: prompt }] }],
@@ -46,11 +47,13 @@ async function startServer() {
   // Prompt-based diagnosis (ticket generation, lookup, chat, re-rank).
   app.post('/api/diagnose', async (req, res) => {
     try {
+      const apiKey = requireGeminiKey(req, res);
+      if (!apiKey) return;
       const { prompt, json } = req.body || {};
       if (!prompt || typeof prompt !== 'string') {
         return res.status(400).json({ error: 'prompt is required' });
       }
-      const text = await generate(prompt, !!json);
+      const text = await generate(prompt, !!json, apiKey);
       res.json({ text });
     } catch (error) {
       console.error('Diagnosis error:', error.message || error);
@@ -61,11 +64,13 @@ async function startServer() {
   // Live-data diagnosis (Live Scan page / Bluetooth MVP contract).
   app.post('/diagnose', async (req, res) => {
     try {
+      const apiKey = requireGeminiKey(req, res);
+      if (!apiKey) return;
       const { codes, liveData, vehicle } = req.body || {};
       const v = vehicle || {};
       const vehicleLine = [v.year, v.make, v.model, v.engine].filter(Boolean).join(' ') || 'unknown vehicle';
       const prompt = `AuroraOS Master Mechanic. A driver needs to know if their car is safe to drive for work today.\nVehicle: ${vehicleLine}.\nTrouble codes: ${(codes || []).join(', ') || 'none'}.\nLive data from the OBD2 adapter: ${JSON.stringify(liveData || {})}.\n\nReply with ONLY a single valid JSON object (no markdown fences, no commentary) with these fields:\n- urgency: one of "Low", "Medium", "High", "Do not drive"\n- plain_language_summary: 2-3 plain sentences a driver understands\n- likely_causes: array of 2-4 short strings, cheapest check first\n- estimated_cost_range_usd: a short range string like "$80-$250"\n- recommended_next_step: one concrete next action\n\nPut cheap checks first. Flag any safety concern. If a code is a misfire (P0300-P0308) or coolant temp is over 105°C, urgency must be "High" or "Do not drive".`;
-      const text = await generate(prompt, true);
+      const text = await generate(prompt, true, apiKey);
       let out;
       try {
         const s = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
@@ -86,41 +91,12 @@ async function startServer() {
     }
   });
 
-  // On-demand parts pricing + nearby stores (Google Places) + labor estimate.
-  const findStores = async (zip) => {
-    const key = process.env.PLACES_API_KEY;
-    if (!key) return { stores: [], note: 'Store lookup is not configured on the server.' };
-    const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': key,
-        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.regularOpeningHours.weekdayDescriptions,places.googleMapsUri',
-      },
-      body: JSON.stringify({ textQuery: `auto parts store near ${zip}`, includedType: 'auto_parts_store', maxResultCount: 8 }),
-    });
-    if (!r.ok) {
-      console.error('Places error:', r.status, (await r.text()).slice(0, 300));
-      return { stores: [], note: `Store lookup failed (HTTP ${r.status}).` };
-    }
-    const j = await r.json();
-    const stores = (j.places || []).map((p) => {
-      const nm = p.displayName?.text || '';
-      const addr = p.formattedAddress || '';
-      return {
-        name: nm,
-        address: addr,
-        phone: p.nationalPhoneNumber || '',
-        hours: p.regularOpeningHours?.weekdayDescriptions || [],
-        maps_url: p.googleMapsUri || '',
-        directions_url: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${nm} ${addr}`)}`,
-      };
-    });
-    return { stores, note: stores.length ? '' : 'No auto parts stores found for that ZIP.' };
-  };
+  // On-demand parts pricing + nearby stores (OpenStreetMap) + labor estimate.
 
   app.post('/api/parts', async (req, res) => {
     try {
+      const apiKey = requireGeminiKey(req, res);
+      if (!apiKey) return;
       const { vehicle, repair, items, zip } = req.body || {};
       if (!/^\d{5}$/.test(String(zip || ''))) return res.status(400).json({ error: 'A 5-digit ZIP code is required.' });
       if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items array is required.' });
@@ -133,10 +109,10 @@ Return ONLY a JSON object, no markdown:
 {"items":[{"name":"","low":0,"high":0,"source":"","url":""}],"labor":{"hours_low":0,"hours_high":0,"rate_low":0,"rate_high":0,"rate_source":""}}
 Rules: give a realistic typical US retail price range for each item even if the exact part is not listed - use the closest equivalent part for this vehicle and note that in the source field. Use null only if you truly cannot estimate. Only give a url that appeared in your search results. Keep item names exactly as given.
 ${list}`;
-      const genAI = getClient();
-      if (!genAI) throw new Error('Gemini API key is not configured on the server.');
+      const genAI = getClient(apiKey);
+      if (!genAI) throw new Error('MISSING_GEMINI_KEY');
       const [storeRes, aiRes] = await Promise.allSettled([
-        findStores(zip),
+        findStoresOSM(zip),
         genAI.models.generateContent({ model: MODEL, contents: [{ parts: [{ text: prompt }] }], config: { tools: [{ googleSearch: {} }] } }),
       ]);
       const st = storeRes.status === 'fulfilled' ? storeRes.value : { stores: [], note: 'Store lookup failed.' };
@@ -161,7 +137,7 @@ ${list}`;
     }
   });
 
-  app.get('/health', (_req, res) => res.json({ ok: true, model: MODEL }));
+  app.get('/health', (_req, res) => res.json({ ok: true, model: MODEL, byok: true }));
 
   // Serve the built app in production.
   const distPath = path.join(process.cwd(), 'dist');

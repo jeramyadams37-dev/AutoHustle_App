@@ -21,6 +21,7 @@ import Garage from '@/pages/Garage';
 import Codes from '@/pages/Codes';
 import Scan from '@/pages/Scan';
 import PreShift from '@/pages/PreShift';
+import ApiKeys from '@/pages/ApiKeys';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -57,6 +58,7 @@ const AuthenticatedApp = () => {
           <Route path="/codes" element={<Codes />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="/pre-shift" element={<PreShift />} />
+          <Route path="/settings" element={<ApiKeys />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

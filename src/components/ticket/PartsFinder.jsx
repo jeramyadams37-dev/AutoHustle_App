@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { MapPin, Phone, Navigation, Search, Loader2 } from 'lucide-react';
 import { getBackendUrl } from '@/lib/gemini';
 
+import { getGeminiKey } from '@/lib/apiKeys';
+import NoKeyNotice from '@/components/NoKeyNotice';
 const store = {
   get: (k) => { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
@@ -24,7 +26,7 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
     try {
       const res = await fetch(`${getBackendUrl()}/api/parts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' , ...(getGeminiKey() ? { 'X-Gemini-Key': getGeminiKey() } : {}) },
         body: JSON.stringify({ vehicle, repair, zip, items: parts.map((p) => ({ name: p.name, quantity: p.quantity, is_tool: !!p.is_tool })) }),
       });
       const j = await res.json();
@@ -69,7 +71,8 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
         {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />} {loading ? 'Searching (up to 40 sec)' : 'Find prices & stores'}
       </button>
       {!validZip && <p className="text-xs text-muted-foreground">Enter a 5-digit ZIP code to search.</p>}
-      {err && <p className="text-xs text-red-400">{err}</p>}
+      {err && (String(err).includes('API Keys') || String(err).includes('missing_gemini_key') ? <NoKeyNotice /> : null)}
+      {err && !(String(err).includes('API Keys') || String(err).includes('missing_gemini_key')) && <p className="text-xs text-red-400">{err}</p>}
       {data && (
         <div className="space-y-3">
           <div className="rounded-xl border border-border divide-y divide-border">

@@ -8,6 +8,7 @@
 // This file keeps the same `invokeFunction(name, payload)` interface used by
 // NewTicket, Codes, TicketDetail and ChatPanel, so no page had to change.
 import { MASTER_PROMPT, TICKET_SCHEMA, buildTicketPrompt } from './ticketSchema.js';
+import { getGeminiKey } from './apiKeys.js';
 
 const CLOUD_RUN_URL = 'https://auto-hustle-backend-926589006847.us-central1.run.app';
 
@@ -22,14 +23,30 @@ export function getBackendUrl() {
 }
 
 async function postJson(path, body) {
+  const key = getGeminiKey();
   const res = await fetch(`${getBackendUrl()}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(key ? { 'X-Gemini-Key': key } : {}) },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Backend error ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401 && data?.error === 'missing_gemini_key') {
+      const e = new Error('Add your free Gemini key in Settings → API Keys to run a diagnosis.');
+      e.code = 'MISSING_GEMINI_KEY';
+      throw e;
+    }
+    throw new Error(data?.error || `Backend error ${res.status}`);
+  }
   return data;
+}
+
+// True when an error means "this user has no Gemini key saved".
+export function isMissingKeyError(err) {
+  if (!err) return false;
+  if (err.code === 'MISSING_GEMINI_KEY') return true;
+  const m = typeof err === 'string' ? err : (err.message || '');
+  return m.includes('API Keys') || m.includes('missing_gemini_key');
 }
 
 // Prompt-based diagnosis (ticket generation, Q&A, code lookup, re-rank).
