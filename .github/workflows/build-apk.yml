@@ -35,6 +35,44 @@ jobs:
       - name: Install app icon
         run: cp -r icon/res/. android/app/src/main/res/
 
+      # Firebase (Google sign-in): install google-services.json from the
+      # GOOGLE_SERVICES_JSON secret (base64) and apply the Google services
+      # Gradle plugin. Set the secret with:
+      #   gh secret set GOOGLE_SERVICES_JSON --repo jeramyadams37-dev/AutoHustle_App --body "$(cat gs.b64)"
+      # If the secret is missing the build still succeeds, but Google
+      # sign-in will fail at runtime until it is set.
+      - name: Install google-services.json (Firebase)
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > android/app/google-services.json
+            echo "google-services.json installed"
+            python3 - <<'PYEOF'
+          import re, sys
+          p = 'android/build.gradle'
+          s = open(p).read()
+          if 'com.google.gms:google-services' not in s:
+              m = re.search(r"(classpath 'com\.android\.tools\.build:gradle:[^']+')", s)
+              if not m:
+                  print('ABORT: android gradle classpath anchor not found')
+                  sys.exit(1)
+              s = s.replace(m.group(1), m.group(1) + "\n        classpath 'com.google.gms:google-services:4.4.4'", 1)
+              open(p, 'w').write(s)
+              print('added google-services classpath')
+          p = 'android/app/build.gradle'
+          s = open(p).read()
+          if 'com.google.gms.google-services' not in s:
+              anchor = "apply from: 'capacitor.build.gradle'"
+              if anchor not in s:
+                  print('ABORT: capacitor.build.gradle anchor not found')
+                  sys.exit(1)
+              block = anchor + "\n\ntry {\n    def servicesJSON = file('google-services.json')\n    if (servicesJSON.text) {\n        apply plugin: 'com.google.gms.google-services'\n    }\n} catch (Exception e) {\n    logger.info('google-services.json not found, google-services plugin not applied.')\n}"
+              s = s.replace(anchor, block, 1)
+              open(p, 'w').write(s)
+              print('applied google-services plugin (conditional on file)')
+          PYEOF
+          else
+            echo "WARNING: GOOGLE_SERVICES_JSON secret is not set - Google sign-in will not work in this build"
+          fi
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       # Release signing: the keystore must be supplied by Jeramy as GitHub
       # Actions secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,

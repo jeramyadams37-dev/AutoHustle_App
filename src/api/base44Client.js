@@ -49,10 +49,10 @@ export const base44 = {
   auth: {
     me: async () => getSessionUser(),
     isAuthenticated: async () => !!getCurrentAccount(),
-    logout: () => { signOut(); },
+    logout: () => { signOut(); import('@/lib/googleAuth').then((m) => m.signOutFromGoogle().catch(() => {})).catch(() => {}); },
     redirectToLogin: () => {},
     setToken: () => {},
-    loginWithProvider: async () => { throw new Error('Google sign-in is not available. Create an account with email and password.'); },
+    loginWithProvider: async () => { const { signInWithGoogle } = await import('@/lib/googleAuth'); await signInWithGoogle(); },
     loginViaEmailPassword: async (email, password) => { await signIn(email, password); },
     register: async ({ email, password }) => { const u = await createAccount({ email, password }); return { user: u }; },
     verifyOtp: noAuth,

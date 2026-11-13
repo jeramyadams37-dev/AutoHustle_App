@@ -2,5 +2,8 @@
   "appId": "com.atothei.autohustle",
   "appName": "Auto-Hustle AI Mechanic",
   "webDir": "dist",
-  "plugins": { "CapacitorHttp": { "enabled": true } }
+  "plugins": {
+    "CapacitorHttp": { "enabled": true },
+    "FirebaseAuthentication": { "providers": ["google.com"] }
+  }
 }

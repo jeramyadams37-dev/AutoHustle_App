@@ -15,6 +15,7 @@
   "dependencies": {
     "@autohustle/obd2": "file:./plugins/obd2",
     "@capacitor/core": "latest",
+    "@capacitor-firebase/authentication": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
     "@capacitor/share": "^8.0.3",
     "@google/genai": "^1.29.0",
@@ -59,6 +60,7 @@
     "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.5.2",
     "express": "^4.21.2",
+    "firebase": "^12.6.0",
     "framer-motion": "^11.16.4",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",

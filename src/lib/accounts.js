@@ -61,7 +61,7 @@ function normEmail(email) {
 }
 
 function publicUser(u) {
-  return { id: u.id, email: u.email, displayName: u.displayName, createdAt: u.createdAt };
+  return { id: u.id, email: u.email, displayName: u.displayName, authProvider: u.authProvider || 'password', createdAt: u.createdAt };
 }
 
 // Accepts createAccount({ email, password, displayName }) or
@@ -73,7 +73,9 @@ export async function createAccount(emailOrObj, maybePassword) {
   if (!email || !email.includes('@')) throw new Error('Enter a valid email address.');
   if (!password || password.length < 6) throw new Error('Password must be at least 6 characters.');
   const rows = readAccounts();
-  if (rows.some((r) => r.email === email)) {
+  const dup = rows.find((r) => r.email === email);
+  if (dup) {
+    if (!dup.passHash) throw new Error('An account with that email already exists — sign in with Google instead.');
     throw new Error('An account with that email already exists on this phone. Log in instead.');
   }
   const salt = randomSalt();
@@ -98,6 +100,7 @@ export async function signIn(emailOrObj, maybePassword) {
   const rows = readAccounts();
   const user = rows.find((r) => r.email === email);
   if (!user) throw new Error('No account with that email on this phone. Create one first.');
+  if (!user.passHash) throw new Error('This account signs in with Google — tap "Continue with Google" instead.');
   const hash = await sha256Hex(user.salt + ':' + password);
   if (hash !== user.passHash) throw new Error('Wrong password — try again.');
   localStorage.setItem(SESSION_KEY, user.id);
@@ -125,4 +128,39 @@ export function getSessionUser() {
   const u = getCurrentAccount();
   if (!u) throw new Error('Not signed in.');
   return { id: u.id, email: u.email, full_name: u.displayName, role: 'user' };
+}
+
+// Google sign-in linking (Firebase Auth proves the email; the account
+// itself stays on-device, same shape as password accounts).
+// RULE: one on-device account per email. If an account with this email
+// already exists, link the Google identity to it (same id, same Gemini
+// key slot, same Stripe tier) — never create a duplicate. If none
+// exists, create a Google-only account (no password; password sign-in
+// for it is refused with a clear message).
+export function linkGoogleAccount({ email, displayName, googleUid }) {
+  const clean = normEmail(email);
+  if (!clean || !clean.includes('@')) throw new Error("Google didn't return an email address. Try again.");
+  const rows = readAccounts();
+  const existing = rows.find((r) => r.email === clean);
+  if (existing) {
+    existing.googleUid = googleUid || existing.googleUid || '';
+    existing.authProvider = existing.passHash ? 'password+google' : 'google';
+    if (!existing.displayName && displayName) existing.displayName = displayName;
+    writeAccounts(rows);
+    localStorage.setItem(SESSION_KEY, existing.id);
+    return publicUser(existing);
+  }
+  const user = {
+    id: uid(),
+    email: clean,
+    displayName: displayName || clean.split('@')[0],
+    googleUid: googleUid || '',
+    authProvider: 'google',
+    salt: null,
+    passHash: null,
+    createdAt: new Date().toISOString(),
+  };
+  writeAccounts([...rows, user]);
+  localStorage.setItem(SESSION_KEY, user.id);
+  return publicUser(user);
 }
