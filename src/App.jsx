@@ -23,6 +23,7 @@ import Scan from '@/pages/Scan';
 import PreShift from '@/pages/PreShift';
 import Subscribe from '@/pages/Subscribe';
 import ApiKeys from '@/pages/ApiKeys';
+import Fleet from '@/pages/Fleet';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
           <Route path="/scan" element={<Scan />} />
           <Route path="/pre-shift" element={<PreShift />} />
           <Route path="/subscribe" element={<Subscribe />} />
+          <Route path="/fleet" element={<Fleet />} />
           <Route path="/settings" element={<ApiKeys />} />
         </Route>
       </Route>

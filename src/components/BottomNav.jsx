@@ -1,18 +1,19 @@
 import { NavLink } from 'react-router-dom';
-import { Home, PlusCircle, Wrench, SearchCode, Bluetooth } from 'lucide-react';
+import { Home, PlusCircle, Wrench, SearchCode, Bluetooth, Truck } from 'lucide-react';
 
 const items = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/new', label: 'New', icon: PlusCircle },
   { to: '/scan', label: 'Scan', icon: Bluetooth },
   { to: '/garage', label: 'Garage', icon: Wrench },
+  { to: '/fleet', label: 'Fleet', icon: Truck },
   { to: '/codes', label: 'Codes', icon: SearchCode },
 ];
 
 export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-zinc-950/95 backdrop-blur safe-bottom">
-      <div className="mx-auto max-w-md grid grid-cols-5">
+      <div className="mx-auto max-w-md grid grid-cols-6">
         {items.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}

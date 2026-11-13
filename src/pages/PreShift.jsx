@@ -116,7 +116,17 @@ export default function PreShift() {
     setChecks(list);
     const fails = list.filter((c) => c.status === 'fail').length;
     const warns = list.filter((c) => c.status === 'warn').length;
-    setVerdict(fails > 0 ? 'fail' : warns > 0 ? 'warn' : 'pass');
+    const v = fails > 0 ? 'fail' : warns > 0 ? 'warn' : 'pass';
+    setVerdict(v);
+    // Fleet: remember this run so the Fleet dashboard can show the latest
+    // verdict per vehicle. On-device only — nothing leaves the phone.
+    try {
+      const risk = v === 'fail' ? daily : v === 'warn' ? Math.round(daily / 2) : 0;
+      base44.entities.PreShiftCheck.create({
+        vehicle_id: vehicleId, verdict: v, checks: list,
+        earnings: daily, at_risk: risk, live_used: usedLive,
+      });
+    } catch (e) { /* fleet history is best-effort; the check itself already ran */ }
     setRunning(false);
   };
 
