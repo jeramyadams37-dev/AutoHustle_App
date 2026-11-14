@@ -31,7 +31,7 @@ const PLANS = [
     blurb: 'For fleets and power users. Everything in Plus, plus more to come.',
     features: [
       'Everything in Plus',
-      'Fleet / multi-vehicle tools (coming soon)',
+      'Fleet / multi-vehicle tools — dashboard, contracts, PDFs, dispatch',
       'Priority support',
     ],
   },
