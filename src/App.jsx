@@ -26,6 +26,7 @@ import Subscribe from '@/pages/Subscribe';
 import ApiKeys from '@/pages/ApiKeys';
 import Fleet from '@/pages/Fleet';
 import { initFleetPush } from '@/lib/fleetPush';
+import { initDueNotificationTapHandler } from '@/lib/dueNotifications';
 import FleetLive from '@/pages/FleetLive';
 import FleetDashboard from '@/pages/FleetDashboard';
 import ServiceScheduler from '@/pages/ServiceScheduler';
@@ -90,6 +91,20 @@ function FleetPushTapHandler() {
   return null;
 }
 
+// Opens the Service scheduler when a due-service local
+// notification is tapped — same pattern as FleetPushTapHandler.
+function DueNotificationTapHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    initDueNotificationTapHandler({
+      onOpenScheduler: (vehicleId) => navigate(
+        vehicleId ? `/service-scheduler?vehicle=${vehicleId}` : '/service-scheduler',
+      ),
+    });
+  }, [navigate]);
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -97,6 +112,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <FleetPushTapHandler />
+          <DueNotificationTapHandler />
           <DriveBackupCheck />
           <AuthenticatedApp />
         </Router>

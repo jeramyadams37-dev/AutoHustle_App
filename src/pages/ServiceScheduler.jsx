@@ -40,6 +40,11 @@ import {
   applyServiceRemove, canCreateScheduledService,
   countScheduledServicesAcrossAccount,
 } from '@/lib/fleetScheduling';
+import {
+  requestDueNotificationPermission, dueNotificationPermissionAsked,
+  cancelDueNotifications, syncDueNotificationsForVehicle,
+  syncAllDueNotifications,
+} from '@/lib/dueNotifications';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -89,6 +94,10 @@ export default function ServiceScheduler() {
     try {
       const r = await base44.entities.Vehicle.filter({}, { sort: '-created_date', limit: 100 });
       setVehicles(r.items || []);
+      // Healing pass: re-sync native due notifications for every
+      // vehicle (restores ones lost to a reinstall, clears stale
+      // ones). No-op on web / without permission. Never blocks load.
+      void syncAllDueNotifications(r.items || []);
     } catch { setVehicles([]); setError('Could not load your vehicles — check your connection and try again.'); } finally { setLoading(false); }
   };
 
@@ -115,17 +124,26 @@ export default function ServiceScheduler() {
     updateVehicle(v, { fleet_ownership: value || 'owned' });
   };
 
-  const addService = (v) => {
+  const addService = async (v) => {
     // AH-H8 backstop: the Schedule button is disabled when blocked,
     // but never save through the gate if the check somehow runs
     // first — the inline upsell card (rendered when createBlocked)
     // is already visible, so just return.
     if (!tierLoading && !canCreateScheduledService(vehicles, tier)) return;
+    // Native due notification (FREE, all tiers): permission is
+    // requested when the user schedules their FIRST service, never
+    // at launch, and only once ever. A denied permission never
+    // blocks scheduling — the in-app card still reminds.
+    if (totalScheduled === 0 && !dueNotificationPermissionAsked()) {
+      await requestDueNotificationPermission();
+    }
     const item = buildScheduledService(formFor(v));
     // AH-H5: a form with no date and no mileage used to do nothing at all.
     if (!item) { setError('Set a date, a mileage, or both before scheduling a service.'); return; }
     const items = [...parseScheduledServices(v), item];
     updateVehicle(v, { fleet_scheduled_services: JSON.stringify(items) });
+    // Native reminder: day-before + due-day, 8:00 AM local.
+    void syncDueNotificationsForVehicle({ ...v, fleet_scheduled_services: JSON.stringify(items) });
     setForms((m) => ({ ...m, [v.id]: blankForm() }));
   };
 
@@ -136,6 +154,8 @@ export default function ServiceScheduler() {
       fleet_scheduled_services: res.scheduledServices,
       fleet_service_last: res.serviceLast,
     });
+    // Done means no native reminder for it anymore.
+    void cancelDueNotifications(v.id, item.id);
     setDoneOpenId(null);
   };
 
@@ -145,12 +165,16 @@ export default function ServiceScheduler() {
     const json = applyServiceCancel(v, item.id);
     if (json) updateVehicle(v, { fleet_scheduled_services: json });
     else setError('Could not cancel that service — it may already be done or cancelled.');
+    // Cancelled means no native reminder for it anymore.
+    void cancelDueNotifications(v.id, item.id);
   };
 
   const removeService = (v, item) => {
     if (!window.confirm(`Remove this scheduled ${scheduledServiceTypeLabel(item.type, item.customLabel).toLowerCase()}?`)) return;
     const json = applyServiceRemove(v, item.id);
     if (json) updateVehicle(v, { fleet_scheduled_services: json });
+    // Removed means no native reminder for it anymore.
+    void cancelDueNotifications(v.id, item.id);
   };
 
   const inputCls = 'tap-target w-full rounded-xl border border-input bg-background px-3 py-2 text-sm';

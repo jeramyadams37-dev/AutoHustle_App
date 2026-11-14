@@ -14,15 +14,18 @@
 //   own mark-done), "View" (opens the scheduler on that vehicle),
 //   and "Not now" (hides that service until tomorrow, date-keyed
 //   in localStorage — it reappears the next day until done).
-// - No native notification is wired here: @capacitor/local-
-//   notifications is not a dependency of this app, and adding a
-//   native plugin + permission flow is a separate job. The in-app
-//   card is the reminder until then (see README).
+// - A native notification is wired alongside this card now:
+//   @capacitor/local-notifications schedules a day-before and a
+//   due-day reminder at 8:00 AM local (src/lib/dueNotifications.js).
+//   The card stays the reminder while the app is open; the native
+//   one reaches the user with the app closed. Marking done from
+//   this card cancels the native notifications for that service.
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CalendarClock, CheckCircle2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { vehicleName } from '@/lib/fleet';
+import { cancelDueNotifications } from '@/lib/dueNotifications';
 import {
   dueServiceReminders,
   applyServiceDone,
@@ -70,6 +73,8 @@ export default function DueServiceReminder() {
         fleet_service_last: res.serviceLast,
       });
       setVehicles((vs) => vs.map((x) => (x.id === vehicle.id ? updated : x)));
+      // Done means no native reminder for it anymore.
+      void cancelDueNotifications(vehicle.id, item.id);
     } catch {
       setError('Could not save that change — check your connection and try again.');
     } finally {
