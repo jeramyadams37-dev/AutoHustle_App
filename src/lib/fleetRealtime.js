@@ -200,6 +200,37 @@ export async function regenerateFleetCode() {
   return out.joinCode;
 }
 
+// --- Push tokens (FCM) ------------------------------------------------
+// The backend keys the token to the server-issued memberId behind
+// the memberToken — it never trusts a client-sent driver ID.
+// Registering is best-effort (returns false on failure): polling
+// stays the backup, so a failed register never breaks Fleet Live.
+export async function registerFleetPushToken(fcmToken, platform) {
+  const m = getFleetMembership();
+  if (!m || !fcmToken) return false;
+  try {
+    await callFleetAction('fleetRegisterToken', {
+      memberToken: m.memberToken,
+      fcmToken,
+      platform: platform || 'android',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function unregisterFleetPushToken() {
+  const m = getFleetMembership();
+  if (!m) return false;
+  try {
+    await callFleetAction('fleetUnregisterToken', { memberToken: m.memberToken });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // OpenStreetMap link for a coordinate — the no-network fallback
 // under the map (the list always works even when tiles won't load).
 export function fleetLocationMapsUrl(lat, lng) {

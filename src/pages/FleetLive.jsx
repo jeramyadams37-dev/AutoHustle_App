@@ -3,9 +3,10 @@
 // AutoHustle Fleet talks to the RoadHouse shared backend; drivers
 // receive dispatch and share location from RoadHouse.
 //
-// POLLING v1 (not push): dispatch polls every 10s, locations every
-// 15s, only while this page is open. A dispatch sent while a driver's
-// app is closed is seen the next time they open RoadHouse.
+// PUSH + POLLING: a driver reply now pushes a notification to the
+// owner even with AutoHustle closed (tap it to open Fleet Live).
+// Polling stays the backup: dispatch polls every 10s, locations
+// every 15s, only while this page is open.
 //
 // MAP: react-leaflet + OpenStreetMap tiles (no key, same as the
 // PartsFinder stores). Tiles need a connection — when they can't load,
@@ -30,6 +31,7 @@ import {
   listFleetLocations, setFleetVehicle, removeFleetMember,
   regenerateFleetCode, fleetLocationMapsUrl, timeAgo,
 } from '@/lib/fleetRealtime';
+import { registerPushTokenForFleet, getFleetPushState } from '@/lib/fleetPush';
 
 const DISPATCH_POLL_MS = 10000;
 const LOCATION_POLL_MS = 15000;
@@ -51,6 +53,7 @@ export default function FleetLive() {
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [pushState, setPushState] = useState({ supported: false, tokenRegistered: false });
   const [form, setForm] = useState({
     toMemberId: '', body: '', pickup: '', dropoff: '', time: '', pay: '',
   });
@@ -125,6 +128,12 @@ export default function FleetLive() {
         return;
       }
       setMembership(valid);
+      // Fire-and-forget: a failed register never blocks the page —
+      // polling stays the backup. Then read the state for the line
+      // under the dispatch heading.
+      registerPushTokenForFleet()
+        .then(() => getFleetPushState().then(setPushState).catch(() => {}))
+        .catch(() => {});
       await loadVehicles();
       if (cancelled) return;
       await refreshAll();
@@ -151,6 +160,9 @@ export default function FleetLive() {
     try {
       const m = await createFleet(fleetName);
       setMembership(m);
+      registerPushTokenForFleet()
+        .then(() => getFleetPushState().then(setPushState).catch(() => {}))
+        .catch(() => {});
       setLoading(true);
       await loadVehicles();
       await refreshAll();
@@ -241,7 +253,7 @@ export default function FleetLive() {
         <Radio size={22} className="text-primary" /> Fleet Live
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Live dispatch + driver map. Polls every 10–15s while this page is open — no push notifications in v1.
+        Live dispatch + driver map. Drivers get a push notification for every dispatch, even with RoadHouse closed — polling every 10–15s while this page is open keeps it live here too.
       </p>
 
       <TierGate required="pro" feature="Fleet Live">
@@ -412,9 +424,20 @@ export default function FleetLive() {
               <Send size={20} className="text-primary" /> Live dispatch
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Messages reach the driver's phone in RoadHouse (polling — up to ~10s).
+              Messages reach the driver's phone in RoadHouse — a push notification lands even with the app closed (polling, up to ~10s, is the backup).
               Driver replies come back here. With no connection, use the on-device dispatch on the Fleet page instead.
             </p>
+            {pushState.supported ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pushState.tokenRegistered
+                  ? 'Push on — driver replies notify you even with AutoHustle closed.'
+                  : 'Push off — check notification permission. Polling (up to ~10s) is the backup.'}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Push not available on this device — polling (up to ~10s) is the backup.
+              </p>
+            )}
             <div className="mt-3 space-y-2">
               {messages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No live dispatch yet — send the first job below.</p>

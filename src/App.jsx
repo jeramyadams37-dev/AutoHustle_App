@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -24,6 +25,7 @@ import PreShift from '@/pages/PreShift';
 import Subscribe from '@/pages/Subscribe';
 import ApiKeys from '@/pages/ApiKeys';
 import Fleet from '@/pages/Fleet';
+import { initFleetPush } from '@/lib/fleetPush';
 import FleetLive from '@/pages/FleetLive';
 import FleetDashboard from '@/pages/FleetDashboard';
 
@@ -74,12 +76,23 @@ const AuthenticatedApp = () => {
   );
 };
 
+// Opens Fleet Live when a fleet push notification is tapped —
+// mounted inside the Router so it can navigate from any page.
+function FleetPushTapHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    initFleetPush({ onOpenFleet: () => navigate('/fleet-live') });
+  }, [navigate]);
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
+          <FleetPushTapHandler />
           <AuthenticatedApp />
         </Router>
         <Toaster />

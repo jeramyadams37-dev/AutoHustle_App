@@ -16,6 +16,7 @@
     "@autohustle/obd2": "file:./plugins/obd2",
     "@capacitor/core": "latest",
     "@capacitor-firebase/authentication": "^8.6.0",
+    "@capacitor-firebase/messaging": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
     "@capacitor/share": "^8.0.3",
     "@google/genai": "^1.29.0",
