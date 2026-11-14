@@ -25,7 +25,7 @@
 //                     body, pickup, dropoff, time, pay }
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSign, CalendarClock, Plus, Trash2, Loader2, Car, FileText, Camera, Download, Eye, User, Paperclip, ShieldCheck, FileSignature, X, Radio } from 'lucide-react';
+import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSign, CalendarClock, Plus, Trash2, Loader2, Car, FileText, Camera, Download, Eye, User, Paperclip, ShieldCheck, FileSignature, X, Radio, LayoutDashboard } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import TierGate from '@/components/TierGate';
 import {
@@ -1265,6 +1265,9 @@ export default function Fleet() {
       <TierGate required="pro" feature="Fleet">
       <Link to="/fleet-live" className="tap-target mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
         <Radio size={16} /> Live dispatch + driver map
+      </Link>
+      <Link to="/fleet-dashboard" className="tap-target mt-2 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-3 font-display font-bold uppercase tracking-wide text-sm">
+        <LayoutDashboard size={16} /> Fleet dashboard — status & next service
       </Link>
         {loading ? (
           <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>
