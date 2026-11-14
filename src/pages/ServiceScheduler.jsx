@@ -1,7 +1,7 @@
 // Service scheduler — garage / vehicle level. Page open to all
 // tiers (SERVICE_SCHEDULER_TIER is 'free'), but CREATING is gated
-// by the AH-H8 first-free rule: the account's first scheduled
-// service is free, the 2nd and beyond need Plus (see
+// by the AH-H8 first-free rule: the account's first schedule
+// is free, the 2nd and beyond need Plus (see
 // canCreateScheduledService in fleetScheduling.js). Editing,
 // marking done, and cancelling an EXISTING service are never
 // gated — a Free user always keeps control of what they already
@@ -80,7 +80,7 @@ export default function ServiceScheduler() {
   const [saving, setSaving] = useState('');
   const [error, setError] = useState('');
 
-  // AH-H8 first-free rule: the account's first scheduled service is
+  // AH-H8 first-free rule: the account's first schedule is
   // free; the 2nd and beyond need Plus or Pro. While the tier is
   // still loading we do NOT enforce the gate (a Plus user must
   // never flash the upsell) — createBlocked stays false until the
@@ -387,7 +387,7 @@ export default function ServiceScheduler() {
                     className={inputCls}
                   />
                 </div>
-                {/* AH-H8: first scheduled service is free per account;
+                {/* AH-H8: first schedule is free per account;
                     the 2nd and beyond need Plus. Blocked Free users get
                     this inline upsell — never a silent block, never a popup.
                     Editing / done / cancel above are ungated. */}
@@ -396,7 +396,7 @@ export default function ServiceScheduler() {
                     <div className="flex items-center gap-2">
                       <Lock size={18} className="text-primary" />
                       <span className="font-display font-semibold uppercase text-sm tracking-wide">
-                        Your first scheduled service was free — the next one needs Plus
+                        Your first schedule was free — the next one needs Plus
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -410,7 +410,7 @@ export default function ServiceScheduler() {
                     </Link>
                   </div>
                 ) : (!tierLoading && tier === 'free' && totalScheduled === 0) ? (
-                  <p className="text-xs text-muted-foreground">Your first scheduled service is free — after that, scheduling more needs Plus ($10/mo).</p>
+                  <p className="text-xs text-muted-foreground">Your first schedule is free, and we'll remind you when it's due — after that, scheduling more needs Plus ($10/mo).</p>
                 ) : null}
                 <button
                   onClick={() => addService(v)}
@@ -437,7 +437,7 @@ export default function ServiceScheduler() {
         <CalendarClock size={26} className="text-primary" /> Service scheduler
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on Fleet Status. Your first scheduled service is free — scheduling more needs Plus ($10/mo).
+        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on Fleet Status. Your first schedule is free, and we'll remind you when it's due — scheduling more needs Plus ($10/mo).
       </p>
 
       {error && (

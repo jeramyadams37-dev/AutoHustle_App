@@ -43,7 +43,7 @@
 // next-service updates from the done job (manual interval, if set,
 // still wins, same as before).
 //
-// TIER (AH-H8, decided 2026-11-14): first scheduled service FREE
+// TIER (AH-H8, decided 2026-11-14): first schedule FREE
 // per account, then Plus.
 //   - The scheduler PAGE stays open to every tier: it wraps itself
 //     in <TierGate required={SERVICE_SCHEDULER_TIER}> with 'free'
@@ -52,7 +52,7 @@
 //     services they already have — never hold an existing service
 //     hostage.
 //   - CREATING is gated per account by canCreateScheduledService():
-//     the first scheduled service (count 0) is free for any tier;
+//     the first schedule (count 0) is free for any tier;
 //     the 2nd and beyond need Plus or Pro. The count is the total
 //     across ALL vehicles (see countScheduledServicesAcrossAccount)
 //     — a fleet owner with 10 vehicles does not get 10 free ones.
