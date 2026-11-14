@@ -19,7 +19,7 @@ export default function Module4({ data }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{r.job}</p>
                 <p className="text-xs text-muted-foreground mt-1 leading-snug">{r.reason}</p>
-                {r.overlap && <p className="text-[11px] text-amber-300/80 mt-1">↳ {r.overlap}</p>}
+                {r.overlap && <p className="text-xs text-amber-300/80 mt-1">↳ {r.overlap}</p>}
               </div>
             </div>
           </div>

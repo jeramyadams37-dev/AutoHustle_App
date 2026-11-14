@@ -18,7 +18,7 @@ export default function ChecklistItem({ id, title, subtitle, expected, checked, 
           <div className="flex items-start justify-between gap-2">
             <p className={`text-sm font-medium leading-snug ${checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{title}</p>
             {badge && (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300 text-mono whitespace-nowrap">{badge}</span>
+              <span className="shrink-0 text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-zinc-800 text-amber-300 text-mono whitespace-nowrap">{badge}</span>
             )}
           </div>
           {subtitle && <p className="text-xs text-muted-foreground mt-1 leading-snug">{subtitle}</p>}

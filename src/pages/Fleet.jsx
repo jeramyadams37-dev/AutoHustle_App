@@ -2,7 +2,7 @@
 // Dashboard: every garage vehicle with its latest pre-shift verdict,
 // assigned driver, next service due, costs and downtime. Driver
 // contracts (employed / lease) with PDFs, vehicle + driver photos,
-// driver profiles, documents, and fleet PDF exports (status sheet and
+// driver records, documents, and fleet PDF exports (status sheet and
 // per-vehicle service records).
 // Records (all localStorage via base44 entities):
 //   Vehicle       — fleet_driver_name, fleet_driver_phone,
@@ -29,6 +29,7 @@ import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSi
 import { base44 } from '@/api/base44Client';
 import { goBackOrHome } from '@/lib/goBack';
 import TierGate from '@/components/TierGate';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   vehicleName, fmtMoney, fmtMiles, serviceDue, latestCheckFor,
   sumCosts, downtimeDays, costPerMile,
@@ -94,6 +95,15 @@ export default function Fleet() {
   const [saving, setSaving] = useState('');
   const [pdfBusy, setPdfBusy] = useState('');
   const [fleetError, setFleetError] = useState('');
+  // AH-M8: tabbed sections — Vehicles / Drivers / Dispatch.
+  const [fleetTab, setFleetTab] = useState('vehicles');
+  // AH-M9: ONE inline-error pattern for the per-vehicle forms
+  // (service / cost / downtime). Keyed by vehicle id so the error
+  // shows right next to the form that failed, instead of the
+  // page-level banner or a silent save. Contracts, driver records,
+  // photos, documents and PDF exports keep their existing alert()s.
+  const [formError, setFormError] = useState({});
+  const setVehicleFormError = (vid, msg) => setFormError((m) => ({ ...m, [vid]: msg || '' }));
 
   const load = async () => {
     // Each entity loads on its own so one missing table never blanks
@@ -177,7 +187,7 @@ export default function Fleet() {
     const f = sForm(v);
     // AH-H5: a blank form used to "save" silently (and wipe the interval).
     if (!(f.every || '').toString().trim() && !(f.nextMiles || '').toString().trim() && !(f.nextDate || '').trim()) {
-      setFleetError('Set a service interval, a next mileage, or a next date first.');
+      setVehicleFormError(v.id, 'Set a service interval, a next mileage, or a next date first.');
       return;
     }
     const every = parseInt(f.every, 10);
@@ -187,6 +197,7 @@ export default function Fleet() {
     if (!Number.isFinite(nextMiles) && Number.isFinite(every) && every > 0 && Number.isFinite(Number(v.mileage))) {
       nextMiles = Number(v.mileage) + every;
     }
+    setVehicleFormError(v.id, '');
     updateVehicle(v, {
       service_miles_every: Number.isFinite(every) && every > 0 ? every : '',
       service_miles_next: Number.isFinite(nextMiles) && nextMiles > 0 ? nextMiles : '',
@@ -197,7 +208,8 @@ export default function Fleet() {
   const addCost = async (v) => {
     const f = cForm(v);
     const amount = parseFloat(f.amount);
-    if (!Number.isFinite(amount) || amount <= 0) { setFleetError('Enter an amount over $0 to log a cost.'); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { setVehicleFormError(v.id, 'Enter an amount over $0 to log a cost.'); return; }
+    setVehicleFormError(v.id, '');
     setSaving('cost-' + v.id);
     try {
       await base44.entities.FleetCost.create({
@@ -211,8 +223,10 @@ export default function Fleet() {
 
   const addDowntime = async (v) => {
     const f = wForm(v);
-    if (!f.start || !f.end) { setFleetError('Pick a start and an end date for the downtime.'); return; }
-    if (new Date(f.end + 'T00:00:00') < new Date(f.start + 'T00:00:00')) { setFleetError('The end date has to be on or after the start date.'); return; }
+    if (!f.start || !f.end) { setVehicleFormError(v.id, 'Pick a start and an end date for the downtime.'); return; }
+    if (new Date(f.end + 'T00:00:00') < new Date(f.start + 'T00:00:00')) { setVehicleFormError(v.id, 'The end date has to be on or after the start date.'); return; }
+    if (!(f.reason || '').trim()) { setVehicleFormError(v.id, 'Add a short description — what is the vehicle down for?'); return; }
+    setVehicleFormError(v.id, '');
     setSaving('down-' + v.id);
     try {
       await base44.entities.FleetDowntime.create({
@@ -271,7 +285,10 @@ export default function Fleet() {
     } catch (e) { alert('Could not save that contract.'); } finally { setSaving(''); }
   };
 
+  // AH-L1: ending a contract asks first, like the confirmed
+  // cancels in FleetLive / ServiceScheduler.
   const endContract = async (c) => {
+    if (!window.confirm('End this contract? It stays in history as Ended.')) return;
     try {
       await base44.entities.FleetContract.update(c.id, { status: 'ended', end_date: c.end_date || todayISO() });
       await load();
@@ -301,7 +318,7 @@ export default function Fleet() {
     finally { setPdfBusy(''); }
   };
 
-  // --- Driver profiles ---
+  // --- Driver records ---
   const openNewDriver = () => {
     setDriverEdit({ id: '', vehicle_id: vehicles[0] ? vehicles[0].id : '', name: '', phone: '', license_expiry: '', notes: '', photo: '' });
     setOpenDriverId('new');
@@ -337,7 +354,7 @@ export default function Fleet() {
       setOpenDriverId(null);
       setDriverEdit(null);
       await load();
-    } catch (e) { alert('Could not save that driver profile.'); } finally { setSaving(''); }
+    } catch (e) { alert('Could not save that driver record.'); } finally { setSaving(''); }
   };
   const handleDriverPhoto = async (file) => {
     if (!file || !driverEdit) return;
@@ -431,15 +448,15 @@ export default function Fleet() {
           </p>
           <div className="grid grid-cols-3 gap-2 mt-3 text-center">
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Spent</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Spent</div>
               <div className="font-display font-semibold text-sm">{fmtMoney(total)}</div>
             </div>
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Cost / mile</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Cost / mile</div>
               <div className="font-display font-semibold text-sm">{cpm === null ? '—' : `${fmtMoney(cpm)}/mi`}</div>
             </div>
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Downtime</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Downtime</div>
               <div className="font-display font-semibold text-sm">{days} day{days === 1 ? '' : 's'}</div>
             </div>
           </div>
@@ -453,6 +470,9 @@ export default function Fleet() {
 
         {open && (
           <div className="border-t border-border p-4 space-y-6 bg-zinc-950/40">
+            {formError[v.id] && (
+              <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{formError[v.id]}</p>
+            )}
             {/* Vehicle photo */}
             <div>
               <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><Camera size={16} className="text-primary" /> Vehicle photo</h3>
@@ -473,7 +493,7 @@ export default function Fleet() {
                   {v.fleet_photo && (
                     <button onClick={() => updateVehicle(v, { fleet_photo: '' })} className="tap-target block text-xs text-muted-foreground hover:text-red-400">Remove photo</button>
                   )}
-                  <p className="text-[11px] text-muted-foreground">Photos are shrunk on the phone before saving, so they stay small. The photo prints in the service records PDF.</p>
+                  <p className="text-xs text-muted-foreground">Photos are shrunk on the phone before saving, so they stay small. The photo prints in the service records PDF.</p>
                 </div>
               </div>
             </div>
@@ -528,8 +548,8 @@ export default function Fleet() {
                     <div key={c.id} className="rounded-xl border border-border bg-zinc-950 px-3 py-2 text-sm">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.type === 'lease' ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}`}>{contractTypeLabel(c.type)}</span>
-                          {c.status === 'ended' && <span className="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-zinc-500/15 text-zinc-400">Ended</span>}
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${c.type === 'lease' ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}`}>{contractTypeLabel(c.type)}</span>
+                          {c.status === 'ended' && <span className="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-zinc-500/15 text-zinc-400">Ended</span>}
                           <div className="font-medium mt-1">{c.driver_name}</div>
                           <div className="text-xs text-muted-foreground">{contractSummary(c)}</div>
                         </div>
@@ -732,7 +752,7 @@ export default function Fleet() {
                 <button onClick={() => saveContract(v)} disabled={saving === 'contract-' + v.id} className={saveBtnCls}>
                   {saving === 'contract-' + v.id ? 'Saving…' : 'Save contract'}
                 </button>
-                <p className="text-[11px] text-muted-foreground">The contract PDF is a plain-English template, not legal advice. Have a local attorney review it before you rely on it.</p>
+                <p className="text-xs text-muted-foreground">The contract PDF is a plain-English template, not legal advice. Have a local attorney review it before you rely on it.</p>
               </div>
             </div>
 
@@ -832,7 +852,7 @@ export default function Fleet() {
                       <div className="min-w-0">
                         <span className="font-medium capitalize">{c.category}</span>
                         {c.note && <span className="text-muted-foreground"> — {c.note}</span>}
-                        <div className="text-[11px] text-muted-foreground">{c.date}</div>
+                        <div className="text-xs text-muted-foreground">{c.date}</div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-display font-semibold">{fmtMoney(c.amount)}</span>
@@ -910,7 +930,7 @@ export default function Fleet() {
                       <div className="min-w-0">
                         <span className="font-medium">{docTypeLabel(DOC_TYPES_VEHICLE, d.doc_type)}</span>
                         <span className="text-muted-foreground"> — {d.name}</span>
-                        <div className="text-[11px] text-muted-foreground">{new Date(d.created_date).toLocaleDateString()} · {fmtFileSize(d.size)}</div>
+                        <div className="text-xs text-muted-foreground">{new Date(d.created_date).toLocaleDateString()} · {fmtFileSize(d.size)}</div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => viewDocument(d)} className="tap-target p-2 text-muted-foreground hover:text-primary" aria-label="View document">
@@ -945,7 +965,7 @@ export default function Fleet() {
                     onChange={(e) => { uploadDoc('vehicle', v.id, 'vehicle-' + v.id, e.target.files && e.target.files[0], dcf.doc_type); e.target.value = ''; }}
                   />
                 </label>
-                <p className="text-[11px] text-muted-foreground">Photos are shrunk before saving. Other files are capped at 1.5 MB each — if a file is too big you will get a warning instead of a silent failure.</p>
+                <p className="text-xs text-muted-foreground">Photos are shrunk before saving. Other files are capped at 1.5 MB each — if a file is too big you will get a warning instead of a silent failure.</p>
               </div>
             </div>
 
@@ -960,7 +980,7 @@ export default function Fleet() {
                   {pdfBusy === 'status-' + v.id ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />} Status PDF
                 </button>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2">Service records include the photo, service history, and the pre-shift check history. Status is a one-page sheet for this vehicle.</p>
+              <p className="text-xs text-muted-foreground mt-2">Service records include the photo, service history, and the pre-shift check history. Status is a one-page sheet for this vehicle.</p>
             </div>
           </div>
         )}
@@ -1032,14 +1052,14 @@ export default function Fleet() {
               </div>
             )}
           </div>
-          <span className="text-xs text-muted-foreground shrink-0">{open ? 'Close' : 'Profile'}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{open ? 'Close' : 'Record'}</span>
         </button>
 
         {open && de && (
           <div className="border-t border-border p-4 space-y-6 bg-zinc-950/40">
             {/* Profile */}
             <div>
-              <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><User size={16} className="text-primary" /> Driver profile</h3>
+              <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><User size={16} className="text-primary" /> Driver record</h3>
               <div className="mt-2 flex items-center gap-3">
                 {de.photo ? (
                   <img src={de.photo} alt="" className="h-20 w-20 rounded-full object-cover border border-border" />
@@ -1057,7 +1077,7 @@ export default function Fleet() {
                   {de.photo && (
                     <button onClick={() => setDriverEdit((m) => ({ ...m, photo: '' }))} className="tap-target block text-xs text-muted-foreground hover:text-red-400">Remove photo</button>
                   )}
-                  <p className="text-[11px] text-muted-foreground">Photos are shrunk on the phone before saving. A photo is optional.</p>
+                  <p className="text-xs text-muted-foreground">Photos are shrunk on the phone before saving. A photo is optional.</p>
                 </div>
               </div>
               <div className="mt-3 space-y-2">
@@ -1087,9 +1107,9 @@ export default function Fleet() {
                   <input value={de.notes} onChange={(e) => setDriverEdit((m) => ({ ...m, notes: e.target.value }))} placeholder="Anything to remember about this driver" className={inputCls} />
                 </div>
                 <button onClick={saveDriverProfile} disabled={saving === 'driver-profile'} className={saveBtnCls}>
-                  {saving === 'driver-profile' ? 'Saving…' : 'Save driver profile'}
+                  {saving === 'driver-profile' ? 'Saving…' : 'Save driver record'}
                 </button>
-                <button onClick={async () => { if (await deleteRow('FleetDriver', d.id, 'this driver profile')) { setOpenDriverId(null); setDriverEdit(null); } }} className="tap-target w-full text-xs text-muted-foreground hover:text-red-400 py-1">Delete this driver profile</button>
+                <button onClick={async () => { if (await deleteRow('FleetDriver', d.id, 'this driver record')) { setOpenDriverId(null); setDriverEdit(null); } }} className="tap-target w-full text-xs text-muted-foreground hover:text-red-400 py-1">Delete this driver record</button>
               </div>
             </div>
 
@@ -1116,7 +1136,7 @@ export default function Fleet() {
                 <div className="mt-3 space-y-2">
                   {thread.map((m) => (
                     <div key={m.id} className={`rounded-xl border px-3 py-2 text-sm max-w-[92%] ${m.sender === 'owner' ? 'border-primary/30 bg-primary/10 ml-auto' : 'border-border bg-zinc-950'}`}>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {m.sender === 'owner' ? 'Owner' : `${d.name} (driver)`} · {new Date(m.created_date).toLocaleString()}
                       </div>
                       {m.body && <div className="mt-0.5">{m.body}</div>}
@@ -1199,7 +1219,7 @@ export default function Fleet() {
                 <button onClick={() => sendDispatch(d)} disabled={saving === 'dispatch-' + d.id} className={saveBtnCls}>
                   {saving === 'dispatch-' + d.id ? 'Sending…' : 'Send note'}
                 </button>
-                <p className="text-[11px] text-muted-foreground">On-device notes — messages live on this phone. For live dispatch to a driver's phone, use Live dispatch + map above.</p>
+                <p className="text-xs text-muted-foreground">On-device notes — messages live on this phone. For live dispatch to a driver's phone, use Live Map & Dispatch above.</p>
               </div>
             </div>
 
@@ -1213,7 +1233,7 @@ export default function Fleet() {
                       <div className="min-w-0">
                         <span className="font-medium">{docTypeLabel(DOC_TYPES_DRIVER, doc.doc_type)}</span>
                         <span className="text-muted-foreground"> — {doc.name}</span>
-                        <div className="text-[11px] text-muted-foreground">{new Date(doc.created_date).toLocaleDateString()} · {fmtFileSize(doc.size)}</div>
+                        <div className="text-xs text-muted-foreground">{new Date(doc.created_date).toLocaleDateString()} · {fmtFileSize(doc.size)}</div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => viewDocument(doc)} className="tap-target p-2 text-muted-foreground hover:text-primary" aria-label="View document">
@@ -1281,10 +1301,10 @@ export default function Fleet() {
         <ArrowLeft size={15} /> Back
       </button>
       <h1 className="mt-3 font-display font-bold text-3xl flex items-center gap-2">
-        <Truck size={26} className="text-primary" /> Fleet
+        <Truck size={26} className="text-primary" /> Owner Fleet
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Pro — every vehicle, its status, driver, service and costs, on one screen. Costs, contracts, and documents stay on this phone — live dispatch and driver locations go through the shared fleet backend (see Live dispatch + map below).
+        Pro — every vehicle, its status, driver, service and costs, on one screen. Costs, contracts, and documents stay on this phone — live dispatch and driver locations go through the shared fleet backend (see Live Map & Dispatch above).
       </p>
 
       {fleetError && (
@@ -1293,12 +1313,12 @@ export default function Fleet() {
           <button onClick={() => { setFleetError(''); load(); }} className="font-semibold text-primary">Retry</button>
         </div>
       )}
-      <TierGate required="pro" feature="Fleet">
+      <TierGate required="pro" feature="Owner Fleet">
       <Link to="/fleet-live" className="tap-target mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
-        <Radio size={16} /> Live dispatch + driver map
+        <Radio size={16} /> Live Map & Dispatch
       </Link>
       <Link to="/fleet-dashboard" className="tap-target mt-2 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-3 font-display font-bold uppercase tracking-wide text-sm">
-        <LayoutDashboard size={16} /> Fleet dashboard — status & next service
+        <LayoutDashboard size={16} /> Fleet Status — status & next service
       </Link>
         {loading ? (
           <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>
@@ -1314,17 +1334,17 @@ export default function Fleet() {
               <div className="rounded-2xl border border-border bg-card p-3">
                 <Truck size={18} className="mx-auto text-primary" />
                 <div className="font-display font-bold text-xl mt-1">{vehicles.length}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Vehicles</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Vehicles</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <DollarSign size={18} className="mx-auto text-primary" />
                 <div className="font-display font-bold text-xl mt-1">{fmtMoney(fleetSpend)}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Fleet spend</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Fleet spend</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <Truck size={18} className="mx-auto text-primary" />
                 <div className="font-display font-bold text-xl mt-1">{fleetDownDays}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Down days</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Down days</div>
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground text-center">
@@ -1336,97 +1356,111 @@ export default function Fleet() {
               </button>
             </div>
 
-            {/* Drivers */}
-            <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
-              <Users size={20} className="text-primary" /> Drivers
-            </h2>
-            {drivers.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">No driver profiles yet. Add one to keep their photo, license date, documents, and notes thread in one place.</p>
-            ) : (
-              <div className="mt-3 space-y-3">
-                {drivers.map(renderDriver)}
-              </div>
-            )}
-            {openDriverId === 'new' && driverEdit ? (
-              <div className="mt-3 rounded-2xl border border-border bg-card p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold uppercase tracking-wide text-sm">New driver</h3>
-                  <button onClick={() => { setOpenDriverId(null); setDriverEdit(null); }} className="tap-target text-muted-foreground"><X size={16} /></button>
+            {/* AH-M8: tabbed sections (Vehicles / Drivers / Dispatch),
+                same Tabs pattern as TicketDetail — this page used to be
+                one ~1,400-line scroll with every vehicle expanded. */}
+            <Tabs value={fleetTab} onValueChange={setFleetTab} className="mt-6">
+              <TabsList className="w-full grid grid-cols-3 h-auto p-1 gap-1">
+                <TabsTrigger value="vehicles" className="text-sm px-2 py-2 font-display uppercase tracking-wide">Vehicles</TabsTrigger>
+                <TabsTrigger value="drivers" className="text-sm px-2 py-2 font-display uppercase tracking-wide">Drivers</TabsTrigger>
+                <TabsTrigger value="dispatch" className="text-sm px-2 py-2 font-display uppercase tracking-wide">Dispatch</TabsTrigger>
+              </TabsList>
+              <TabsContent value="vehicles" className="mt-4">
+                <div className="space-y-4">
+                  {vehicles.map(renderVehicle)}
                 </div>
-                <div>
-                  <label className={labelCls}>Driver name</label>
-                  <input value={driverEdit.name} onChange={(e) => setDriverEdit((m) => ({ ...m, name: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Phone</label>
-                  <input type="tel" value={driverEdit.phone} onChange={(e) => setDriverEdit((m) => ({ ...m, phone: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Assigned vehicle</label>
-                  <select value={driverEdit.vehicle_id} onChange={(e) => setDriverEdit((m) => ({ ...m, vehicle_id: e.target.value }))} className={inputCls}>
-                    <option value="">No vehicle assigned</option>
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>{vehicleName(v)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>License expiry date</label>
-                  <input type="date" value={driverEdit.license_expiry} onChange={(e) => setDriverEdit((m) => ({ ...m, license_expiry: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Notes</label>
-                  <input value={driverEdit.notes} onChange={(e) => setDriverEdit((m) => ({ ...m, notes: e.target.value }))} placeholder="Anything to remember about this driver" className={inputCls} />
-                </div>
-                <button onClick={saveDriverProfile} disabled={saving === 'driver-profile'} className={saveBtnCls}>
-                  {saving === 'driver-profile' ? 'Saving…' : 'Save driver profile'}
-                </button>
-                <p className="text-[11px] text-muted-foreground">Add a photo from the profile once it is saved.</p>
-              </div>
-            ) : (
-              <button onClick={openNewDriver} className="tap-target mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-2.5 font-display font-bold uppercase tracking-wide text-sm">
-                <Plus size={16} /> Add driver
-              </button>
-            )}
-
-            {/* On-device notes — all threads at a glance */}
-            <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
-              <FileText size={20} className="text-primary" /> On-device notes
-            </h2>
-            {drivers.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">Add a driver profile first, then send notes to them from their profile.</p>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {drivers.map((d) => {
-                  const last = lastDispatchFor(d.id);
-                  const veh = vehicles.find((x) => x.id === d.vehicle_id) || null;
-                  return (
-                    <button key={d.id} onClick={() => openDriverProfile(d)} className="tap-target w-full text-left rounded-2xl border border-border bg-card px-4 py-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-display font-semibold text-sm">{d.name}{veh ? ` — ${vehicleName(veh)}` : ''}</div>
-                          {last ? (
-                            <div className="text-xs text-muted-foreground truncate">
-                              {last.sender === 'owner' ? 'Owner: ' : 'Driver: '}{last.body || `${last.pickup ? `Pickup ${last.pickup}` : 'Job details'}`} · {new Date(last.created_date).toLocaleDateString()}
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">No notes yet — tap to send the first one.</div>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{dispatchFor(d.id).length} msg{dispatchFor(d.id).length === 1 ? '' : 's'}</span>
-                      </div>
+                <Link to="/pre-shift" className="tap-target mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
+                  Run a pre-shift check
+                </Link>
+              </TabsContent>
+              <TabsContent value="drivers" className="mt-4">
+                {/* Drivers */}
+                <h2 className="font-display font-bold text-xl flex items-center gap-2">
+                  <Users size={20} className="text-primary" /> Drivers
+                </h2>
+                {drivers.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No driver records yet. Add one to keep their photo, license date, documents, and notes thread in one place.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {drivers.map(renderDriver)}
+                  </div>
+                )}
+                {openDriverId === 'new' && driverEdit ? (
+                  <div className="mt-3 rounded-2xl border border-border bg-card p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-display font-bold uppercase tracking-wide text-sm">New driver</h3>
+                      <button onClick={() => { setOpenDriverId(null); setDriverEdit(null); }} className="tap-target text-muted-foreground"><X size={16} /></button>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Driver name</label>
+                      <input value={driverEdit.name} onChange={(e) => setDriverEdit((m) => ({ ...m, name: e.target.value }))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Phone</label>
+                      <input type="tel" value={driverEdit.phone} onChange={(e) => setDriverEdit((m) => ({ ...m, phone: e.target.value }))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Assigned vehicle</label>
+                      <select value={driverEdit.vehicle_id} onChange={(e) => setDriverEdit((m) => ({ ...m, vehicle_id: e.target.value }))} className={inputCls}>
+                        <option value="">No vehicle assigned</option>
+                        {vehicles.map((v) => (
+                          <option key={v.id} value={v.id}>{vehicleName(v)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>License expiry date</label>
+                      <input type="date" value={driverEdit.license_expiry} onChange={(e) => setDriverEdit((m) => ({ ...m, license_expiry: e.target.value }))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Notes</label>
+                      <input value={driverEdit.notes} onChange={(e) => setDriverEdit((m) => ({ ...m, notes: e.target.value }))} placeholder="Anything to remember about this driver" className={inputCls} />
+                    </div>
+                    <button onClick={saveDriverProfile} disabled={saving === 'driver-profile'} className={saveBtnCls}>
+                      {saving === 'driver-profile' ? 'Saving…' : 'Save driver record'}
                     </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="mt-6 space-y-4">
-              {vehicles.map(renderVehicle)}
-            </div>
-            <Link to="/pre-shift" className="tap-target mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
-              Run a pre-shift check
-            </Link>
+                    <p className="text-xs text-muted-foreground">Add a photo from the record once it is saved.</p>
+                  </div>
+                ) : (
+                  <button onClick={openNewDriver} className="tap-target mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-2.5 font-display font-bold uppercase tracking-wide text-sm">
+                    <Plus size={16} /> Add driver
+                  </button>
+                )}
+              </TabsContent>
+              <TabsContent value="dispatch" className="mt-4">
+                {/* On-device notes — all threads at a glance */}
+                <h2 className="font-display font-bold text-xl flex items-center gap-2">
+                  <FileText size={20} className="text-primary" /> On-device notes
+                </h2>
+                {drivers.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">Add a driver record first, then send notes to them from their record.</p>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {drivers.map((d) => {
+                      const last = lastDispatchFor(d.id);
+                      const veh = vehicles.find((x) => x.id === d.vehicle_id) || null;
+                      return (
+                        <button key={d.id} onClick={() => { openDriverProfile(d); setFleetTab('drivers'); }} className="tap-target w-full text-left rounded-2xl border border-border bg-card px-4 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-display font-semibold text-sm">{d.name}{veh ? ` — ${vehicleName(veh)}` : ''}</div>
+                              {last ? (
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {last.sender === 'owner' ? 'Owner: ' : 'Driver: '}{last.body || `${last.pickup ? `Pickup ${last.pickup}` : 'Job details'}`} · {new Date(last.created_date).toLocaleDateString()}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground">No notes yet — tap to send the first one.</div>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0">{dispatchFor(d.id).length} msg{dispatchFor(d.id).length === 1 ? '' : 's'}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </TierGate>

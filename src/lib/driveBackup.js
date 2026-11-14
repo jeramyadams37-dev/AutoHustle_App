@@ -13,17 +13,14 @@
 //     creates (its own "AutoHustle Backups" folder). It cannot read
 //     the rest of the user's Drive.
 //   - drive.file is a NON-SENSITIVE scope: adding it needs no Google
-//     scope verification. BUT the OAuth consent screen for ai-mechanic
-//     is in Testing mode today, and Testing mode means (a) only the
-//     100 registered test users can consent, and (b) refresh tokens
-//     expire after 7 days. For Drive backup to work for paying
-//     customers, Jeramy must publish the consent screen to
-//     "In production" (Console > OAuth consent screen > Publish app)
-//     and enable the Google Drive API in the ai-mechanic project.
-//     Until then Drive backup works for him (test user) and for any
-//     registered test user, with a re-consent about weekly. The code
-//     is still shipped ready — the UI says plainly when Drive access
-//     is not granted, and nothing else in the app depends on it.
+//     scope verification. The OAuth consent screen for ai-mechanic was
+//     verified In production on 2026-11-14, so any Google account can
+//     consent and refresh tokens do NOT expire after 7 days (that
+//     7-day expiry only applies while a consent screen is in Testing
+//     mode). The Google Drive API is enabled in the ai-mechanic
+//     project. The code is still shipped ready — the UI says plainly
+//     when Drive access is not granted, and nothing else in the app
+//     depends on it.
 //
 // How the token works: @capacitor-firebase/authentication's
 // signInWithGoogle({ scopes }) returns credential.accessToken carrying

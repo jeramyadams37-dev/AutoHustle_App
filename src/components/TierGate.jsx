@@ -11,11 +11,35 @@ import { useTier, tierMeets } from '@/lib/subscription';
 const TIER_LABEL = { plus: 'Plus', pro: 'Pro' };
 
 export default function TierGate({ required = 'plus', feature = 'This feature', children }) {
-  const { tier, loading } = useTier();
+  // AH-M14: useTier returns { tier, status, loading, refresh } — status
+  // is the full getSubscriptionStatus() object, whose .status is
+  // 'unavailable' when the backend has no Stripe key (HTTP 503).
+  const { tier, status, loading, refresh } = useTier();
   if (loading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
         Checking your plan…
+      </div>
+    );
+  }
+  if (status?.status === 'unavailable') {
+    return (
+      <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Lock size={18} className="text-primary" />
+          <span className="font-display font-semibold uppercase text-sm tracking-wide">
+            Couldn&apos;t check your plan
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Couldn&apos;t check your plan — check connection and try again. Your plan shows as Free until the check works.
+        </p>
+        <button
+          onClick={refresh}
+          className="tap-target inline-flex items-center justify-center gap-2 rounded-xl border border-border font-display font-bold uppercase tracking-wide text-sm py-3"
+        >
+          Try again
+        </button>
       </div>
     );
   }

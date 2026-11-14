@@ -76,7 +76,7 @@ export default function Module1({ data, progress, onToggle, onLog, rerank, onRer
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm">{c.cause}</span>
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${likelihoodColor(c.likelihood)}`}>{c.likelihood}</span>
+                    <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded border ${likelihoodColor(c.likelihood)}`}>{c.likelihood}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 leading-snug">{c.reasoning || c.explanation}</p>
                 </div>

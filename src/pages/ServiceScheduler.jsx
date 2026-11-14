@@ -117,6 +117,8 @@ export default function ServiceScheduler() {
   };
 
   const cancelService = (v, item) => {
+    // AH-L9: cancelling asks first, like its neighbour removeService.
+    if (!window.confirm(`Cancel this scheduled ${scheduledServiceTypeLabel(item.type, item.customLabel).toLowerCase()}?`)) return;
     const json = applyServiceCancel(v, item.id);
     if (json) updateVehicle(v, { fleet_scheduled_services: json });
     else setError('Could not cancel that service — it may already be done or cancelled.');
@@ -226,7 +228,7 @@ export default function ServiceScheduler() {
                       )}
                       {doneOpen && item.status === 'scheduled' && (
                         <div className="mt-2 space-y-2 rounded-xl border border-border bg-zinc-900/60 p-3">
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Marking done records this as the last {scheduledServiceTypeLabel(item.type, item.customLabel).toLowerCase()} — the fleet dashboard works the next one out from it.
                           </p>
                           <div className="grid grid-cols-2 gap-2">
@@ -345,7 +347,7 @@ export default function ServiceScheduler() {
                 >
                   {saving === v.id ? 'Saving…' : 'Schedule service'}
                 </button>
-                <p className="text-[11px] text-muted-foreground">Set a date, a mileage, or both — one of them is required. Overdue shows red, due within 7 days / 500 mi shows amber.</p>
+                <p className="text-xs text-muted-foreground">Set a date, a mileage, or both — one of them is required. Overdue shows red, due within 7 days / 500 mi shows amber.</p>
               </div>
             </div>
           </div>
@@ -363,7 +365,7 @@ export default function ServiceScheduler() {
         <CalendarClock size={26} className="text-primary" /> Service scheduler
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on the fleet dashboard.
+        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on Fleet Status.
       </p>
 
       {error && (
@@ -385,7 +387,7 @@ export default function ServiceScheduler() {
           <div className="mt-5 space-y-4">
             {vehicles.map(renderVehicle)}
             <Link to="/fleet-dashboard" className="tap-target mt-1 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-3 font-display font-bold uppercase tracking-wide text-sm">
-              <CalendarClock size={16} /> See all upcoming services on the fleet dashboard
+              <CalendarClock size={16} /> See all upcoming services on Fleet Status
             </Link>
           </div>
         )}

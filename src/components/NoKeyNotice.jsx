@@ -13,7 +13,7 @@ export default function NoKeyNotice({ message }) {
         {message || 'Add your free Gemini key to run a diagnosis. It takes about a minute and the key stays on your phone.'}
       </p>
       <Link
-        to="/settings"
+        to="/api-keys"
         className="tap-target mt-3 inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground font-display font-bold uppercase tracking-wide text-sm px-4 py-2.5"
       >
         <KeyRound size={16} /> Add my free key

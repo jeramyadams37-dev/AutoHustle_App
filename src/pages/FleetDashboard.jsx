@@ -1,4 +1,4 @@
-// Fleet dashboard — Pro-only, on-device only, no server.
+// Fleet Status — Pro-only, on-device only, no server.
 // One screen: every garage vehicle with its status, next service due,
 // and cost / downtime, plus a fleet-wide summary at the top.
 // Next service: the owner's manual interval on the Vehicle wins
@@ -200,19 +200,19 @@ export default function FleetDashboard() {
           </p>
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
             <CalendarClock size={13} /> {due.label}
-            <span className="ml-1 inline-flex items-center rounded-full bg-zinc-500/15 text-zinc-400 px-2 py-0.5 text-[11px]">{sourceTag}</span>
+            <span className="ml-1 inline-flex items-center rounded-full bg-zinc-500/15 text-zinc-400 px-2 py-0.5 text-xs">{sourceTag}</span>
           </p>
           <div className="grid grid-cols-3 gap-2 mt-3 text-center">
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Spent</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Spent</div>
               <div className="font-display font-semibold text-sm">{fmtMoney(total)}</div>
             </div>
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Cost / mile</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Cost / mile</div>
               <div className="font-display font-semibold text-sm">{cpm === null ? '—' : `${fmtMoney(cpm)}/mi`}</div>
             </div>
             <div className="rounded-xl border border-border bg-zinc-950 p-2">
-              <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Downtime</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wide">Downtime</div>
               <div className="font-display font-semibold text-sm">{days} day{days === 1 ? '' : 's'}</div>
             </div>
           </div>
@@ -278,7 +278,7 @@ export default function FleetDashboard() {
             {/* Per-type last service — what the computed due is built from */}
             <div>
               <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><Wrench size={16} className="text-primary" /> Last service done</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">Record when a job was last done and the dashboard works out when it is due next (oil 5,000 mi / 6 mo, tires 7,500 mi / 12 mo, brakes 12,000 mi / 12 mo, filters 15,000 mi / 12 mo, fluids 30,000 mi / 24 mo).</p>
+              <p className="text-xs text-muted-foreground mt-1">Record when a job was last done and the dashboard works out when it is due next (oil 5,000 mi / 6 mo, tires 7,500 mi / 12 mo, brakes 12,000 mi / 12 mo, filters 15,000 mi / 12 mo, fluids 30,000 mi / 24 mo).</p>
               <div className="mt-2 space-y-2">
                 <div>
                   <label className={labelCls}>Job</label>
@@ -339,16 +339,16 @@ export default function FleetDashboard() {
   return (
     <div className="min-h-screen px-5 pt-5 pb-6">
       <button onClick={() => navigate('/fleet')} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-        <ArrowLeft size={15} /> Back to Fleet
+        <ArrowLeft size={15} /> Back to Owner Fleet
       </button>
       <h1 className="mt-3 font-display font-bold text-3xl flex items-center gap-2">
-        <LayoutDashboard size={26} className="text-primary" /> Fleet dashboard
+        <LayoutDashboard size={26} className="text-primary" /> Fleet Status
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Pro — every vehicle, its status, and its next service, on one screen. Most urgent first. Everything stays on this phone.
       </p>
 
-      <TierGate required="pro" feature="Fleet dashboard">
+      <TierGate required="pro" feature="Fleet Status">
         {loading ? (
           <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>
         ) : vehicles.length === 0 ? (
@@ -363,32 +363,32 @@ export default function FleetDashboard() {
               <div className="rounded-2xl border border-border bg-card p-3">
                 <CheckCircle2 size={18} className="mx-auto text-green-400" />
                 <div className="font-display font-bold text-xl mt-1">{summary.go}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">GO</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">GO</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <XCircle size={18} className="mx-auto text-red-400" />
                 <div className="font-display font-bold text-xl mt-1">{summary.doNotDrive}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">DO NOT DRIVE</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">DO NOT DRIVE</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <AlertTriangle size={18} className="mx-auto text-amber-400" />
                 <div className="font-display font-bold text-xl mt-1">{summary.caution}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">CAUTION</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">CAUTION</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">
               <div className="rounded-2xl border border-border bg-card p-3 text-center">
                 <DollarSign size={18} className="mx-auto text-primary" />
                 <div className="font-display font-bold text-xl mt-1">{fmtMoney(summary.month)}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Spent this month</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{fmtMoney(summary.spend)} all time · {summary.downDays} down days</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide">Spent this month</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{fmtMoney(summary.spend)} all time · {summary.downDays} down days</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3 text-center">
                 <CalendarClock size={18} className="mx-auto text-primary" />
                 <div className="font-display font-bold text-sm mt-1 leading-snug">
                   {summary.soonest ? summary.soonest.due.label : 'No service set'}
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
                   {summary.soonest ? `Next service · ${vehicleName(summary.soonest.vehicle)}` : 'Set one per vehicle below'}
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function FleetDashboard() {
               {rows.map(renderRow)}
             </div>
             <Link to="/fleet" className="tap-target mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
-              <Truck size={16} /> Open Fleet — drivers, contracts &amp; costs
+              <Truck size={16} /> Open Owner Fleet — drivers, contracts &amp; costs
             </Link>
           </>
         )}

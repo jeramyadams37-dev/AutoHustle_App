@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { SearchCode, Loader2, AlertCircle, Wrench, ListChecks } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
@@ -40,7 +41,7 @@ export default function Codes() {
           placeholder="e.g. P0562"
           className="flex-1 bg-zinc-950 border border-border rounded-xl px-4 py-3.5 text-base text-mono uppercase outline-none focus:border-primary"
         />
-        <button onClick={lookup} disabled={loading} className="tap-target px-5 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase tracking-wide disabled:opacity-40">
+        <button onClick={lookup} disabled={loading} aria-label="Search" className="tap-target px-5 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase tracking-wide disabled:opacity-40">
           {loading ? <Loader2 size={18} className="animate-spin" /> : <SearchCode size={20} />}
         </button>
       </div>
@@ -51,7 +52,7 @@ export default function Codes() {
           <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-zinc-900 to-zinc-950 p-4">
             <div className="flex items-center justify-between">
               <span className="text-mono text-2xl font-bold text-primary">{result.code}</span>
-              {result.severity && <span className={`text-[11px] font-bold uppercase px-2.5 py-1 rounded-md border ${severityColor(result.severity)}`}>{result.severity}</span>}
+              {result.severity && <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-md border ${severityColor(result.severity)}`}>{result.severity}</span>}
             </div>
             <p className="mt-2 font-medium">{result.meaning}</p>
             {result.system && <p className="text-xs text-muted-foreground mt-1 uppercase font-display tracking-wide">{result.system}</p>}
@@ -79,6 +80,17 @@ export default function Codes() {
               {result.first_test.expected_reading && <p className="text-xs text-mono text-amber-300 mt-2">Expected: {result.first_test.expected_reading}</p>}
             </div>
           )}
+
+          {/* AH-M17: same prefill mechanism Scan.jsx uses — NewTicket reads
+              state { vehicleId, dtcs }. Codes has no vehicle picker, so the
+              driver picks (or enters) the vehicle on the New Ticket screen. */}
+          <Link
+            to="/new"
+            state={{ vehicleId: '', dtcs: result.code || code }}
+            className="tap-target mt-1 inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase text-sm tracking-wide px-4 py-2.5"
+          >
+            <Wrench size={16} /> Start a ticket with this code
+          </Link>
         </div>
       )}
 

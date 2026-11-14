@@ -74,7 +74,7 @@ export default function DiagramViewer({ title, svgId, image, caveat, children, a
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-zinc-900/40">
         <span className="font-display font-semibold text-sm uppercase tracking-wide" style={{ color: accent }}>{title}</span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] text-muted-foreground hidden sm:inline mr-1">pinch / double-tap</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline mr-1">pinch / double-tap</span>
           <button onClick={handleSave} className="tap-target inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-foreground/80 hover:text-primary hover:bg-primary/10 transition">
             <Download size={15} /> Save
           </button>
@@ -109,7 +109,7 @@ export default function DiagramViewer({ title, svgId, image, caveat, children, a
         )}
       </div>
       {caveat && (
-        <div className="px-3 py-2 text-[11px] text-amber-400/90 bg-amber-500/5 border-t border-border flex items-center gap-2">
+        <div className="px-3 py-2 text-xs text-amber-400/90 bg-amber-500/5 border-t border-border flex items-center gap-2">
           <AlertTriangle size={13} /> Typical layout — verify on your vehicle
         </div>
       )}

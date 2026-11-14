@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Car, Plus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { goBackOrHome } from '@/lib/goBack';
@@ -9,19 +9,27 @@ const empty = { year: '', make: '', model: '', trim: '', engine: '', mileage: ''
 
 export default function NewTicket() {
   const navigate = useNavigate();
+  // AH-M17: Scan.jsx / Codes.jsx link here with state { vehicleId, dtcs } —
+  // the same mechanism Scan already used; NewTicket just never read it.
+  const prefill = useLocation().state || {};
   const [vehicle, setVehicle] = useState(empty);
   const [symptoms, setSymptoms] = useState('');
-  const [dtcs, setDtcs] = useState('');
+  const [dtcs, setDtcs] = useState(prefill.dtcs || '');
   const [vehicles, setVehicles] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // AH-M2: true once the driver has typed into the vehicle fields, so the
+  // "New vehicle" state is visible instead of a silent deselect.
+  const [typedNewVehicle, setTypedNewVehicle] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         const page = await base44.entities.Vehicle.filter({}, { sort: '-created_date', limit: 50 });
-        setVehicles(page.items || []);
+        const items = page.items || [];
+        setVehicles(items);
+        if (prefill.vehicleId && items.some((v) => v.id === prefill.vehicleId)) setSelectedId(prefill.vehicleId);
       } catch (e) {}
     })();
   }, []);
@@ -68,7 +76,9 @@ export default function NewTicket() {
   const field = (key, placeholder) => (
     <input
       value={vehicle[key]}
-      onChange={(e) => { setVehicle({ ...vehicle, [key]: e.target.value }); setSelectedId(''); }}
+      // AH-M2: typing here clears any saved-vehicle selection — flag it so the
+      // "New vehicle" note below shows instead of deselecting silently.
+      onChange={(e) => { setVehicle({ ...vehicle, [key]: e.target.value }); setTypedNewVehicle(true); setSelectedId(''); }}
       placeholder={placeholder}
       className="w-full bg-zinc-950 border border-border rounded-xl px-3.5 py-3 text-base outline-none focus:border-primary"
     />
@@ -96,7 +106,7 @@ export default function NewTicket() {
               <label className="text-xs uppercase font-display tracking-wide text-muted-foreground flex items-center gap-1.5 mb-2"><Car size={14} /> Saved Vehicle (optional)</label>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 <button
-                  onClick={() => setSelectedId('')}
+                  onClick={() => { setSelectedId(''); setTypedNewVehicle(false); }}
                   className={`shrink-0 tap-target px-3 py-2 rounded-xl border text-sm ${!selectedId ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'}`}
                 >
                   <Plus size={14} className="inline mr-1" /> New
@@ -104,7 +114,7 @@ export default function NewTicket() {
                 {vehicles.map((v) => (
                   <button
                     key={v.id}
-                    onClick={() => setSelectedId(v.id)}
+                    onClick={() => { setSelectedId(v.id); setTypedNewVehicle(false); }}
                     className={`shrink-0 tap-target px-3 py-2 rounded-xl border text-sm whitespace-nowrap ${selectedId === v.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card'}`}
                   >
                     {[v.year, v.make, v.model].filter(Boolean).join(' ')}
@@ -117,13 +127,17 @@ export default function NewTicket() {
           {/* Vehicle fields */}
           {!selectedId && (
             <div>
-              <label className="text-xs uppercase font-display tracking-wide text-muted-foreground mb-2 block">Vehicle</label>
-              <div className="grid grid-cols-3 gap-2">
+              <label className="text-xs uppercase font-display tracking-wide text-muted-foreground mb-2 flex items-center gap-2">Vehicle
+                {typedNewVehicle && <span className="text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-0.5 normal-case tracking-normal font-semibold">New vehicle</span>}
+              </label>
+              {typedNewVehicle && <p className="text-sm text-amber-300/90 mb-2">New vehicle — typing here cleared the saved vehicle selection. Pick a saved vehicle above to use it instead.</p>}
+              {/* AH-M2: one column on narrow screens, 3-across only on wider screens. */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {field('year', 'Year')}
                 {field('make', 'Make')}
                 {field('model', 'Model')}
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                 {field('trim', 'Trim (opt.)')}
                 {field('engine', 'Engine (opt.)')}
               </div>

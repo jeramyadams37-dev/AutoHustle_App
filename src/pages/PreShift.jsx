@@ -8,7 +8,7 @@
 //     95–105°C is a warning.
 //  3. Battery — under 12.4V resting / under 13.5V running is a warning.
 //  4. Recent tickets — a ticket in the last 7 days is a warning.
-// Live readings come from the ELM327 adapter when it is connected
+// Live readings come from the OBD2 adapter when it is connected
 // (see src/lib/obd2.js); without it the driver answers the three
 // manual questions and the check still works, marked as manual.
 import { useEffect, useState } from 'react';
@@ -24,11 +24,12 @@ export default function PreShift() {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState('');
-  const [earnings, setEarnings] = useState('180');
+  const [earnings, setEarnings] = useState('');
   const [running, setRunning] = useState(false);
   const [checks, setChecks] = useState(null);
   const [verdict, setVerdict] = useState(null);
   const [liveUsed, setLiveUsed] = useState(false);
+  const [adapterError, setAdapterError] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [manual, setManual] = useState({ warningLight: false, tempGaugeHigh: false, slowCrank: false });
@@ -63,6 +64,7 @@ export default function PreShift() {
     setRunning(true);
     setChecks(null);
     setVerdict(null);
+    setAdapterError(false);
     let codes = [];
     let live = null;
     let usedLive = false;
@@ -74,7 +76,10 @@ export default function PreShift() {
         live = await readObd2LiveData();
         usedLive = true;
       } catch (e) {
-        // Fall through to manual answers if the adapter is not reachable.
+        // AH-M7: an adapter failure used to fall through silently — the
+        // driver only saw the small "Checked manually" line. Flag it so
+        // the result shows "Adapter not reachable — manual check".
+        setAdapterError(true);
       }
     }
     setLiveUsed(usedLive);
@@ -202,6 +207,7 @@ export default function PreShift() {
             inputMode="decimal"
             value={earnings}
             onChange={(e) => setEarnings(e.target.value)}
+            placeholder="e.g. 180"
             className="tap-target w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
@@ -217,9 +223,9 @@ export default function PreShift() {
           />
         </div>
         <div className="space-y-2 text-sm">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={manual.warningLight} onChange={(e) => setManual({ ...manual, warningLight: e.target.checked })} /> A warning light is on</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={manual.tempGaugeHigh} onChange={(e) => setManual({ ...manual, tempGaugeHigh: e.target.checked })} /> Temp gauge reads high</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={manual.slowCrank} onChange={(e) => setManual({ ...manual, slowCrank: e.target.checked })} /> Slow or weak crank on start</label>
+          <label className="tap-target flex cursor-pointer items-center gap-3"><input type="checkbox" className="h-7 w-7 shrink-0 accent-primary" checked={manual.warningLight} onChange={(e) => setManual({ ...manual, warningLight: e.target.checked })} /> A warning light is on</label>
+          <label className="tap-target flex cursor-pointer items-center gap-3"><input type="checkbox" className="h-7 w-7 shrink-0 accent-primary" checked={manual.tempGaugeHigh} onChange={(e) => setManual({ ...manual, tempGaugeHigh: e.target.checked })} /> Temp gauge reads high</label>
+          <label className="tap-target flex cursor-pointer items-center gap-3"><input type="checkbox" className="h-7 w-7 shrink-0 accent-primary" checked={manual.slowCrank} onChange={(e) => setManual({ ...manual, slowCrank: e.target.checked })} /> Slow or weak crank on start</label>
         </div>
         <button
           onClick={runCheck}
@@ -244,6 +250,7 @@ export default function PreShift() {
                 : `About $${atRisk} of today's $${daily} is at risk${verdict === 'fail' ? ' — a breakdown mid-shift costs the whole day.' : ' if this gets worse mid-shift.'}`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">{liveUsed ? 'Checked with live adapter data.' : 'Checked manually — connect the adapter for live readings.'}</p>
+            {adapterError && <p role="alert" className="text-xs text-amber-400 mt-1">Adapter not reachable — manual check.</p>}
             {saveError && <p role="alert" className="text-xs text-red-400 mt-2">{saveError}</p>}
           </div>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-3">

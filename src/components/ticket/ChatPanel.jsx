@@ -79,7 +79,7 @@ export default function ChatPanel({ ticket }) {
           placeholder="Ask the master mechanic…"
           className="flex-1 bg-zinc-950 border border-border rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-primary"
         />
-        <button onClick={send} disabled={sending || !input.trim()} className="tap-target w-11 shrink-0 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-40">
+        <button onClick={send} disabled={sending || !input.trim()} aria-label="Send message" className="tap-target w-11 shrink-0 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-40">
           <Send size={18} />
         </button>
       </div>

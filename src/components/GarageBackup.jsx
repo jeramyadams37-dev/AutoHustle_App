@@ -343,6 +343,13 @@ export default function GarageBackup() {
                 Restoring <span className="text-foreground font-medium">replaces everything in your garage now</span> with
                 the backup&apos;s data. Your current garage is saved first, so you can undo right after.
               </p>
+              {/* AH-M21: the preview passes a dropped count through — show it,
+                  so skipped rows are not silently lost on restore. */}
+              {(pending.dropped || 0) > 0 && (
+                <p className="mt-1 text-amber-400">
+                  {pending.dropped} {pending.dropped === 1 ? 'row' : 'rows'} in this backup couldn&apos;t be read and {pending.dropped === 1 ? 'was' : 'were'} skipped.
+                </p>
+              )}
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
@@ -379,7 +386,7 @@ export default function GarageBackup() {
         {!googleLinked && (
           <p className="text-sm text-muted-foreground mt-2">
             You&apos;re not signed in with Google, so Drive backup can&apos;t run yet. Sign in with
-            Google (Settings → API Keys shows your sign-in), then turn it on here. The manual
+            Google (Settings shows your sign-in), then turn it on here. The manual
             export above always works.
           </p>
         )}
@@ -391,26 +398,28 @@ export default function GarageBackup() {
           >
             <HardDrive size={16} /> Drive backup: {driveOn ? 'On' : 'Off'}
           </button>
+          {/* AH-M20: "Back up to Drive now" stays gated on the auto-backup
+              toggle, but "Restore from Drive" is always shown — a backup
+              already in Drive must be reachable without re-enabling
+              automatic backup first. */}
           {driveOn && (
-            <>
-              <button
-                type="button"
-                onClick={doDriveNow}
-                disabled={busy === 'drive'}
-                className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase text-sm tracking-wide disabled:opacity-50"
-              >
-                <RefreshCw size={16} /> {busy === 'drive' ? 'Backing up…' : 'Back up to Drive now'}
-              </button>
-              <button
-                type="button"
-                onClick={doRestoreFromDrive}
-                disabled={busy === 'drive-restore'}
-                className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border font-display font-semibold uppercase text-sm tracking-wide disabled:opacity-50"
-              >
-                <Cloud size={16} /> {busy === 'drive-restore' ? 'Checking Drive…' : 'Restore from Drive'}
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={doDriveNow}
+              disabled={busy === 'drive'}
+              className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase text-sm tracking-wide disabled:opacity-50"
+            >
+              <RefreshCw size={16} /> {busy === 'drive' ? 'Backing up…' : 'Back up to Drive now'}
+            </button>
           )}
+          <button
+            type="button"
+            onClick={doRestoreFromDrive}
+            disabled={busy === 'drive-restore'}
+            className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border font-display font-semibold uppercase text-sm tracking-wide disabled:opacity-50"
+          >
+            <Cloud size={16} /> {busy === 'drive-restore' ? 'Checking Drive…' : 'Restore from Drive'}
+          </button>
         </div>
       </div>
     </section>

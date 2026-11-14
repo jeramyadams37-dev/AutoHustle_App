@@ -22,6 +22,9 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
   const validZip = /^\d{5}$/.test(zip);
 
   const find = async () => {
+    // AH-L4: the button stays enabled so a bad ZIP shows this error on tap
+    // instead of sitting disabled with only a hint.
+    if (!validZip) { setErr('Enter a 5-digit ZIP code to search.'); return; }
     setLoading(true); setErr(''); store.set('ah_zip', zip);
     try {
       const res = await fetch(`${getBackendUrl()}/api/parts`, {
@@ -59,7 +62,8 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
   return (
     <div className="space-y-3 mt-6">
       <h3 className="font-display font-bold uppercase tracking-wide text-base">Prices, Stores & Labor</h3>
-      <div className="grid grid-cols-3 gap-2">
+      {/* AH-L4: stacked on a phone instead of 3-across. */}
+      <div className="grid grid-cols-1 gap-2">
         <label className="text-xs text-muted-foreground">ZIP
           <input value={zip} inputMode="numeric" maxLength={5} onChange={(e) => setZip(e.target.value.replace(/\D/g, ''))} placeholder="62675" className={input} /></label>
         <label className="text-xs text-muted-foreground">My rate $/hr
@@ -67,7 +71,7 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
         <label className="text-xs text-muted-foreground">My hours
           <input value={hours} inputMode="decimal" onChange={(e) => { setHours(e.target.value); store.set('ah_hours', e.target.value); }} placeholder="auto" className={input} /></label>
       </div>
-      <button onClick={find} disabled={!validZip || loading} className="tap-target w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-primary text-primary-foreground font-display font-bold uppercase tracking-wide disabled:opacity-40">
+      <button onClick={find} disabled={loading} className="tap-target w-full inline-flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-primary text-primary-foreground font-display font-bold uppercase tracking-wide disabled:opacity-40">
         {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />} {loading ? 'Searching (up to 40 sec)' : 'Find prices & stores'}
       </button>
       {!validZip && <p className="text-xs text-muted-foreground">Enter a 5-digit ZIP code to search.</p>}
@@ -80,7 +84,7 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
               <div key={i} className="p-3 text-sm flex justify-between gap-3">
                 <span>{p.name}{p.quantity ? ` ×${p.quantity}` : ''}{p.is_tool ? ' (tool)' : ''}</span>
                 <span className="text-mono text-amber-300 text-right shrink-0">
-                  {f ? <>{money(f.low)}–{money(f.high)}{f.url && <a href={f.url} target="_blank" rel="noreferrer" className="block text-[10px] text-sky-300 underline">{f.source || 'source'}</a>}</> : '—'}
+                  {f ? <>{money(f.low)}–{money(f.high)}{f.url && <a href={f.url} target="_blank" rel="noreferrer" className="block text-xs text-sky-300 underline">{f.source || 'source'}</a>}</> : '—'}
                 </span>
               </div>); })}
           </div>
@@ -88,7 +92,7 @@ export default function PartsFinder({ ticketId, vehicle, repair, parts = [] }) {
             <div className="flex justify-between"><span>Parts (excl. tools)</span><span className="text-mono text-amber-300">{money(pLow)}–{money(pHigh)}</span></div>
             <div className="flex justify-between"><span>Labor {h1 != null ? `${h1}${h2 !== h1 ? `–${h2}` : ''} hr` : ''} {r1 != null ? `@ $${r1}${r2 !== r1 ? `–${r2}` : ''}/hr` : ''}</span><span className="text-mono text-amber-300">{money(lLow)}–{money(lHigh)}</span></div>
             <div className="flex justify-between font-bold border-t border-border pt-1"><span>Estimated total</span><span className="text-mono text-amber-300">{money(pLow + (lLow || 0))}–{money(pHigh + (lHigh || 0))}</span></div>
-            {L.rate_source && !myRate && <p className="text-[10px] text-muted-foreground">Labor rate source: {L.rate_source}. Type your own rate above to override.</p>}
+            {L.rate_source && !myRate && <p className="text-xs text-muted-foreground">Labor rate source: {L.rate_source}. Type your own rate above to override.</p>}
           </div>
           {data.price_note && <p className="text-xs text-red-400">{data.price_note}</p>}
           <p className="text-xs text-muted-foreground">{data.disclaimer}</p>

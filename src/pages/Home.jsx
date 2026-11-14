@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Wrench, PlusCircle, SearchCode, Car, ArrowRight, Zap, ListChecks, MessageSquare, Bluetooth, ClipboardCheck, KeyRound, Crown, Truck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
+import { getCurrentAccount, signOut } from '@/lib/accounts';
+
 export default function Home() {
   const navigate = useNavigate();
+  const account = getCurrentAccount();
   const [stats, setStats] = useState({ tickets: 0, vehicles: 0 });
   const [recent, setRecent] = useState([]);
   const [loadError, setLoadError] = useState('');
@@ -42,7 +45,7 @@ export default function Home() {
             AI Mechanic<br /><span className="text-primary">in your pocket.</span>
           </h1>
           <p className="mt-3 text-muted-foreground text-[15px] leading-relaxed max-w-sm">
-            Powered by AuroraOS Master Mechanic. Turn your vehicle and a symptom into a pro diagnostic shop ticket, repair guide, and interactive checklist.
+            Built for delivery drivers. Turn your vehicle and a symptom into a pro diagnostic shop ticket, repair guide, and interactive checklist.
           </p>
           <button
             onClick={() => navigate('/new')}
@@ -59,7 +62,7 @@ export default function Home() {
             <Link to="/scan" className="tap-target rounded-2xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition">
               <Bluetooth size={20} className="text-primary" />
               <span className="font-display font-semibold uppercase text-sm tracking-wide">Live Scan</span>
-              <span className="text-xs text-muted-foreground">ELM327 codes + live data</span>
+              <span className="text-xs text-muted-foreground">OBD2 codes + live data</span>
             </Link>
             <Link to="/codes" className="tap-target rounded-2xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition">
               <SearchCode size={20} className="text-primary" />
@@ -78,15 +81,34 @@ export default function Home() {
             </Link>
             <Link to="/fleet" className="tap-target col-span-2 rounded-2xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition">
               <Truck size={20} className="text-primary" />
-              <span className="font-display font-semibold uppercase text-sm tracking-wide">Fleet — Pro</span>
+              <span className="font-display font-semibold uppercase text-sm tracking-wide">Owner Fleet — Pro</span>
               <span className="text-xs text-muted-foreground">Every vehicle, its status, driver, service and costs — one screen</span>
             </Link>
-            <Link to="/settings" className="tap-target col-span-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-1 hover:border-amber-500/60 transition">
+            <Link to="/api-keys" className="tap-target col-span-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-1 hover:border-amber-500/60 transition">
               <KeyRound size={20} className="text-primary" />
-              <span className="font-display font-semibold uppercase text-sm tracking-wide">API Keys</span>
+              <span className="font-display font-semibold uppercase text-sm tracking-wide">Settings</span>
               <span className="text-xs text-muted-foreground">Your free Gemini key — pays for your own diagnoses</span>
             </Link>
           </div>
+          {/* AH-M5: small account row — signed-in email + Sign out, so
+              account/sign-out is findable from Home, not only Settings. */}
+          {account ? (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm">
+              <span className="truncate text-muted-foreground">
+                Signed in as <span className="font-medium text-foreground">{account.email}</span>
+              </span>
+              <button
+                onClick={() => { signOut(); navigate('/login', { replace: true }); }}
+                className="tap-target inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-primary"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 text-sm text-muted-foreground">
+              Not signed in. <Link to="/login" className="font-medium text-primary underline">Log in</Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,7 +144,7 @@ export default function Home() {
           ].map((f, i) => (
             <div key={i} className="rounded-xl border border-border bg-card p-3 text-center">
               <f.icon size={20} className="mx-auto text-primary mb-1.5" />
-              <p className="text-[11px] text-muted-foreground leading-tight">{f.label}</p>
+              <p className="text-xs text-muted-foreground leading-tight">{f.label}</p>
             </div>
           ))}
         </div>

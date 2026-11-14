@@ -59,6 +59,12 @@ export default function TicketDetail() {
   const progress = ticket.checklist_state?.items || {};
   const partsState = ticket.checklist_state?.parts || {};
 
+  // AH-M1: Module3 returns null with no components and Module4 returns null
+  // with no recommendations — hide those tabs instead of showing a blank tab.
+  const hasLocation = (d.module3?.components?.length || 0) > 0;
+  const hasService = (d.module4?.recommendations?.length || 0) > 0;
+  const visibleTabs = TABS.filter((t) => (t.value === 'location' ? hasLocation : t.value === 'service' ? hasService : true));
+
   const persist = async (nextState) => {
     const updated = { ...ticket, checklist_state: nextState };
     setTicket(updated);
@@ -124,13 +130,16 @@ export default function TicketDetail() {
     } finally { setDeleting(false); }
   };
 
+  // AH-M10: the ticket link opens behind ProtectedRoute, so a recipient
+  // without sign-in gets a login wall. Share the PDF export instead — it is
+  // already imported/used here (PDF button) and is a file anyone can open.
+  // (Also retires the old navigator.share path, whose failure was silent.)
   const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try { await navigator.share({ title: `Auto-Hustle Ticket — ${ticket.vehicle_summary}`, url }); } catch {}
-    } else {
-      navigator.clipboard?.writeText(url);
-      toast({ title: 'Link copied', description: 'Ticket link copied to clipboard.' });
+    try {
+      await exportTicketPDF(ticket);
+      toast({ title: 'PDF ready to share', description: 'Share the PDF file — a ticket link would ask the recipient to sign in.' });
+    } catch (e) {
+      toast({ title: 'Could not export the PDF', description: 'Check your connection and try again.', variant: 'destructive' });
     }
   };
 
@@ -166,9 +175,9 @@ export default function TicketDetail() {
       )}
 
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
-        <TabsList className="w-full grid grid-cols-6 h-auto p-1 gap-1">
-          {TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value} className="text-[11px] px-1 py-2 font-display uppercase tracking-wide">{t.label}</TabsTrigger>
+        <TabsList className="w-full flex overflow-x-auto no-scrollbar h-auto p-1 gap-1">
+          {visibleTabs.map((t) => (
+            <TabsTrigger key={t.value} value={t.value} className="text-sm px-3 py-2.5 shrink-0 font-display uppercase tracking-wide">{t.label}</TabsTrigger>
           ))}
         </TabsList>
         <TabsContent value="diagnose" className="mt-4">

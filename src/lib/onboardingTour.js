@@ -10,11 +10,12 @@ export const TOUR_STORAGE_KEY = 'ah_onboarding_tour_v1';
 // button in Settings → API Keys). The tour component listens for it.
 export const TOUR_START_EVENT = 'ah:start-tour';
 
-// One stop per screen, in the order the bottom tabs run, plus a final
-// Settings stop (where the free Gemini key lives and where the tour can
-// be replayed). Routes are the real routes from src/App.jsx at HEAD
-// 5b2e64f: / (Home), /new, /scan, /garage, /fleet, /codes, /subscribe,
-// /settings (the API Keys page — there is no separate Settings page).
+// One stop per screen, in the order the bottom tabs run, plus a
+// Pre-Shift stop (the daily free check) and a final Settings stop
+// (where the free Gemini key lives and where the tour can be replayed).
+// Routes are the real routes from src/App.jsx at HEAD 4095d12: / (Home),
+// /new, /scan, /pre-shift, /garage, /fleet, /codes, /subscribe,
+// /api-keys (the Settings page — there is no separate Settings page).
 // Copy is plain-English, driver-first, and short on purpose.
 export const TOUR_STEPS = [
   {
@@ -33,7 +34,13 @@ export const TOUR_STEPS = [
     id: 'scan',
     route: '/scan',
     title: 'Scan with an adapter',
-    body: 'Plug in an ELM327 Bluetooth adapter, tap Scan Vehicle, and read your codes and live data. No adapter yet? Try the demo scan \u2014 it uses a sample P0300.',
+    body: 'Plug in an OBD2 Bluetooth adapter, tap Scan Vehicle, and read your codes and live data. No adapter yet? Try the demo scan \u2014 it uses a sample P0300.',
+  },
+  {
+    id: 'pre-shift',
+    route: '/pre-shift',
+    title: 'Daily pre-shift check',
+    body: 'Before a shift, run the free pre-shift check \u2014 warning lights, temp gauge, crank and recent tickets \u2014 and get a Go, Caution or Do not drive verdict. Two minutes, before the car costs you a day.',
   },
   {
     id: 'garage',
@@ -44,8 +51,8 @@ export const TOUR_STEPS = [
   {
     id: 'fleet',
     route: '/fleet',
-    title: 'Fleet \u2014 for Pro',
-    body: 'Run more than one vehicle for work? Fleet keeps every vehicle, driver, cost and contract on one screen. Fleet tools are Pro \u2014 on Free you\u2019ll see a locked card here instead.',
+    title: 'Owner Fleet \u2014 for Pro',
+    body: 'Run more than one vehicle for work? Owner Fleet keeps every vehicle, driver, cost and contract on one screen. Owner Fleet tools are Pro \u2014 on Free you\u2019ll see a locked card here instead.',
   },
   {
     id: 'codes',
@@ -61,9 +68,9 @@ export const TOUR_STEPS = [
   },
   {
     id: 'settings',
-    route: '/settings',
+    route: '/api-keys',
     title: 'You\u2019re set \u2014 one last thing',
-    body: 'Diagnoses use your own free Gemini key \u2014 add it here in Settings (API Keys). About a minute, and the key stays on your phone. Want this tour again? Come back here and tap \u201cTake the tour again\u201d.',
+    body: 'Diagnoses use your own free Gemini key \u2014 add it here in Settings. About a minute, and the key stays on your phone. Want this tour again? Come back here and tap \u201cTake the tour again\u201d.',
   },
 ];
 

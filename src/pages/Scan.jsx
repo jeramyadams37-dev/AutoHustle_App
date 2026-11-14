@@ -1,5 +1,5 @@
 // v10: Live Scan — ported from the Bluetooth MVP debug build.
-// Flow (same as the MVP): connect to the ELM327 adapter -> read trouble
+// Flow (same as the MVP): connect to the OBD2 adapter -> read trouble
 // codes -> if none, stop and say the vehicle looks clean -> read live data
 // (RPM, coolant temp, ...) -> POST { codes, liveData, vehicle } to the
 // backend /diagnose endpoint -> show urgency, plain-language summary,
@@ -30,6 +30,7 @@ export default function Scan() {
   const [codes, setCodes] = useState([]);
   const [isDemo, setIsDemo] = useState(false);
   const [cleanScan, setCleanScan] = useState(false);
+  const [scanError, setScanError] = useState('');
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState('');
 
@@ -52,6 +53,7 @@ export default function Scan() {
     setLiveData(null);
     setCodes([]);
     setCleanScan(false);
+    setScanError('');
     setIsDemo(demo);
     try {
       let codeRes;
@@ -93,6 +95,9 @@ export default function Scan() {
       setResult(diagnosis);
       setStatus('Diagnosis complete');
     } catch (e) {
+      // AH-M15: surface the specific plugin/connection error, not just
+      // the generic "Status:" line above.
+      setScanError(e?.message || 'Scan failed.');
       setStatus(`Error: ${e.message}`);
     }
     setScanning(false);
@@ -111,7 +116,7 @@ export default function Scan() {
         <Bluetooth size={26} className="text-primary" /> Live Scan
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Connect to your ELM327 adapter, read the codes and live data, and get a diagnosis from the backend.
+        Connect your OBD2 adapter, read the codes and live data, and get a diagnosis from the backend.
       </p>
 
       <div className="mt-5 rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -131,6 +136,11 @@ export default function Scan() {
           </select>
         </div>
         <p className="text-sm">Status: <span className="font-medium">{status}</span></p>
+        {scanError && (
+          <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm">
+            Couldn&apos;t reach the adapter — {scanError}
+          </p>
+        )}
         <button
           onClick={() => runScan(false)}
           disabled={scanning}

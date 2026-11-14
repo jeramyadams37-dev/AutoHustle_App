@@ -71,7 +71,8 @@ const AuthenticatedApp = () => {
           <Route path="/fleet-live" element={<FleetLive />} />
           <Route path="/fleet-dashboard" element={<FleetDashboard />} />
           <Route path="/service-scheduler" element={<ServiceScheduler />} />
-          <Route path="/settings" element={<ApiKeys />} />
+          <Route path="/api-keys" element={<ApiKeys />} />
+          <Route path="/settings" element={<Navigate to="/api-keys" replace />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

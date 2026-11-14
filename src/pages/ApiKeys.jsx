@@ -1,4 +1,4 @@
-// Settings → API Keys. One-tap Gemini key setup (BYOK).
+// Settings — API keys & account. One-tap Gemini key setup (BYOK).
 // The key is free from Google AI Studio, stays on this phone, and is
 // tied to the signed-in account. It is sent with each backend request
 // so the backend can call Gemini as you; the backend does not store it.
@@ -36,6 +36,9 @@ export default function ApiKeys() {
   };
 
   const handleRemove = () => {
+    // AH-L2: removing the key breaks every diagnosis until a new key is
+    // entered — confirm first.
+    if (!window.confirm('Remove your Gemini key? Every diagnosis will stop working until you enter a new key.')) return;
     clearGeminiKey();
     setSaved(false);
     setEditing(true);
@@ -57,9 +60,9 @@ export default function ApiKeys() {
       <button onClick={() => goBackOrHome(navigate)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3">
         <ArrowLeft size={18} /> Back
       </button>
-      <h1 className="font-display font-bold text-3xl">API Keys</h1>
+      <h1 className="font-display font-bold text-3xl">Settings</h1>
       <p className="text-muted-foreground text-sm mt-1">
-        Your Gemini key pays for your own diagnoses — not Jeramy&apos;s. It is free, it stays on your phone, and it is only used for your own tickets.
+        Your Gemini key pays for your own diagnoses — not the app owner&apos;s. It is free, it stays on your phone, and it is only used for your own tickets.
       </p>
 
       {account ? (
@@ -142,7 +145,7 @@ export default function ApiKeys() {
         <ArrowRight size={18} className="text-primary shrink-0" />
         <span>
           <span className="font-display font-semibold uppercase tracking-wide text-xs">Take the tour again</span>
-          <span className="block text-sm text-muted-foreground mt-0.5">Walk through Home, New, Scan, Garage, Fleet, Codes and plans again — about a minute.</span>
+          <span className="block text-sm text-muted-foreground mt-0.5">Walk through Home, New, Scan, Pre-Shift, Garage, Fleet, Codes and plans again — about a minute.</span>
         </span>
       </button>
 

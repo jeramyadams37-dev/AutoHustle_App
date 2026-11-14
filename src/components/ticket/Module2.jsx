@@ -42,10 +42,10 @@ export default function Module2({ data, progress, onToggle, onLog, warnings = []
                   />
                   {(step.torque_spec || step.tool_size || step.parts_needed?.length) && (
                     <div className="flex flex-wrap gap-1.5 pl-10">
-                      {step.torque_spec && <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-mono">🔩 {step.torque_spec}</span>}
-                      {step.tool_size && <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-300 border border-sky-500/30 text-mono">🔧 {step.tool_size}</span>}
+                      {step.torque_spec && <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 text-mono">🔩 {step.torque_spec}</span>}
+                      {step.tool_size && <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-300 border border-sky-500/30 text-mono">🔧 {step.tool_size}</span>}
                       {step.parts_needed?.map((p, i) => (
-                        <span key={i} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">{p}</span>
+                        <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">{p}</span>
                       ))}
                     </div>
                   )}

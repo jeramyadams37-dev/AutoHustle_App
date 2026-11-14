@@ -1,17 +1,18 @@
-// Fleet Live — owner view for live dispatch + live driver locations.
+// Live Map & Dispatch — owner view for live dispatch + live driver locations.
 // Pro-gated (TierGate). The owner side of the fleet realtime layer:
 // AutoHustle Fleet talks to the RoadHouse shared backend; drivers
 // receive dispatch and share location from RoadHouse.
 //
 // PUSH + POLLING: a driver reply now pushes a notification to the
-// owner even with AutoHustle closed (tap it to open Fleet Live).
+// owner even with AutoHustle closed (tap it to open Live Map & Dispatch).
 // Polling stays the backup: dispatch polls every 10s, locations
 // every 15s, only while this page is open.
 //
 // MAP: react-leaflet + OpenStreetMap tiles (no key, same as the
 // PartsFinder stores). Tiles need a connection — when they can't load,
-// the list under the map still shows every on-duty driver with
-// coordinates and an "Open in Maps" link.
+// the fallback line under the heading says so, and the list under the
+// map still shows every on-duty driver with their last-updated time
+// and an "Open in Maps" link (no raw coordinates shown).
 //
 // LOCATION PRIVACY: a driver shares location ONLY while their
 // on-duty toggle is on in RoadHouse (off by default, stoppable any
@@ -313,13 +314,13 @@ export default function FleetLive() {
         <ArrowLeft size={16} /> Back
       </button>
       <h1 className="mt-2 font-display text-2xl font-bold flex items-center gap-2">
-        <Radio size={22} className="text-primary" /> Fleet Live
+        <Radio size={22} className="text-primary" /> Live Map & Dispatch
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Live dispatch + driver map. Drivers get a push notification for every dispatch, even with RoadHouse closed — polling every 10–15s while this page is open keeps it live here too.
+        Live dispatch and a map of on-duty drivers. Drivers get a push notification for every dispatch, even with RoadHouse closed — polling every 10–15s while this page is open keeps it live here too.
       </p>
 
-      <TierGate required="pro" feature="Fleet Live">
+      <TierGate required="pro" feature="Live Map & Dispatch">
         {loading ? (
           <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground flex items-center gap-2">
             <Loader2 size={16} className="animate-spin" /> Loading your fleet…
@@ -365,7 +366,10 @@ export default function FleetLive() {
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Give this code to your drivers — they enter it in RoadHouse to join {membership.fleetName}.
-                Only the code is shared; your fleet token stays on this phone.
+                {/* AH-X5: the fleet-token sentence is owner-only — a driver
+                    only ever sees a join code, so it stays off the shared card
+                    for anyone who is not the owner. */}
+                {membership.role === 'owner' && ' Only the code is shared; your fleet token stays on this phone.'}
               </p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="font-display text-3xl font-bold tracking-[0.3em]">{membership.joinCode}</span>
@@ -387,7 +391,7 @@ export default function FleetLive() {
               The server keeps only their last point — no trail — and deletes it when they go off duty.
               The map needs a connection; the list below always works.
             </p>
-            {mapReady && (
+            {mapReady ? (
               <div className="mt-3 overflow-hidden rounded-2xl border border-border" style={{ height: 320 }}>
                 <MapContainer center={center} zoom={11} style={{ height: '100%', width: '100%' }}>
                   <TileLayer
@@ -409,6 +413,10 @@ export default function FleetLive() {
                   ))}
                 </MapContainer>
               </div>
+            ) : (
+              // AH-M13: the map used to vanish silently when it was not
+              // ready — say so, and point at the list that still works.
+              <p role="status" className="mt-3 rounded-2xl border border-border bg-card p-3 text-sm text-muted-foreground">Map couldn&apos;t load — driver list below still works.</p>
             )}
             {locations.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">No drivers on duty right now.</p>
@@ -421,7 +429,10 @@ export default function FleetLive() {
                         {loc.displayName}{loc.vehicleLabel ? ` — ${loc.vehicleLabel}` : ''}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {loc.lat.toFixed(5)}, {loc.lng.toFixed(5)} · Updated {timeAgo(loc.updatedAt)}
+                        {/* AH-M13: no raw lat/lng — area/updated-time only.
+                            Locations carry no area string, so the
+                            last-updated time is what the row shows. */}
+                        Updated {timeAgo(loc.updatedAt)}
                       </div>
                     </div>
                     <a
@@ -456,7 +467,9 @@ export default function FleetLive() {
                           {d.displayName}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {d.online ? 'Online' : `Last seen ${timeAgo(d.lastSeen)}`}
+                          {/* AH-X4: on-duty lives in RoadHouse, so the dot
+                              says so — "Online" hid where the state comes from. */}
+                          {d.online ? 'On duty in RoadHouse' : 'Off duty'}{d.lastSeen ? ` · Last seen ${timeAgo(d.lastSeen)}` : ''}
                         </div>
                       </div>
                       <button
@@ -488,7 +501,7 @@ export default function FleetLive() {
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Messages reach the driver's phone in RoadHouse — a push notification lands even with the app closed (polling, up to ~10s, is the backup).
-              Driver replies come back here. With no connection, use the on-device dispatch on the Fleet page instead.
+              Driver replies come back here. With no connection, use the on-device dispatch on the Owner Fleet page instead.
             </p>
             {pushState.supported ? (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -512,7 +525,7 @@ export default function FleetLive() {
                       {msg.toMemberId ? ' → driver' : ' → all drivers'}
                       {' · '}{new Date(msg.createdAt).toLocaleString()}
                       {msg.scheduledDispatchId ? (
-                        <span className="ml-1 inline-flex items-center rounded-full bg-blue-500/15 text-blue-400 px-2 py-0.5 text-[11px]">
+                        <span className="ml-1 inline-flex items-center rounded-full bg-blue-500/15 text-blue-400 px-2 py-0.5 text-xs">
                           Scheduled{msg.scheduledFor ? ` for ${new Date(msg.scheduledFor).toLocaleString()}` : ''}
                         </span>
                       ) : null}
@@ -572,9 +585,8 @@ export default function FleetLive() {
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Set a job for a future date and time. The backend holds it and delivers it then — a push lands on the
-              driver&apos;s phone exactly like a live dispatch, with the 10s polling as backup. No Cloud Scheduler:
-              delivery happens on the next poll after the time you set, so it can land up to ~10s late. Cancel it
-              any time before it goes out.
+              driver&apos;s phone, usually within ~10 seconds of the set time. No Cloud Scheduler: delivery happens
+              on the next poll after the time you set. Cancel it any time before it goes out.
             </p>
             <div className="mt-3 space-y-2">
               {scheduled.filter((r) => r.status === 'scheduled').length === 0 ? (
@@ -661,7 +673,7 @@ export default function FleetLive() {
             </div>
 
             <Link to="/fleet" className="tap-target mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border py-3 font-display font-bold uppercase tracking-wide text-sm">
-              <Truck size={16} /> Back to Fleet (on-device)
+              <Truck size={16} /> Back to Owner Fleet (on-device)
             </Link>
           </>
         )}
