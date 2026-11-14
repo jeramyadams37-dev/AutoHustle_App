@@ -1,6 +1,13 @@
-// Service scheduler — garage / vehicle level. FREE tier (see
-// SERVICE_SCHEDULER_TIER in fleetScheduling.js — flip that one
-// constant to gate it behind Plus/Pro).
+// Service scheduler — garage / vehicle level. Page open to all
+// tiers (SERVICE_SCHEDULER_TIER is 'free'), but CREATING is gated
+// by the AH-H8 first-free rule: the account's first scheduled
+// service is free, the 2nd and beyond need Plus (see
+// canCreateScheduledService in fleetScheduling.js). Editing,
+// marking done, and cancelling an EXISTING service are never
+// gated — a Free user always keeps control of what they already
+// scheduled. A Free user who has used their free one sees an
+// inline Plus upsell in the form, never a silent block, never
+// a popup.
 //
 // NOT fleet-gated and NOT lease-gated, on purpose: a solo owner
 // with a garage and no fleet at all uses this page exactly as a
@@ -20,16 +27,18 @@
 // fleet-wide; this page is where they are managed.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarClock, Car, CheckCircle2, AlertTriangle, Clock, Plus, Trash2, Loader2, Wrench, ChevronDown, XCircle } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Car, CheckCircle2, AlertTriangle, Clock, Plus, Trash2, Loader2, Wrench, ChevronDown, XCircle, Lock, Crown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import TierGate from '@/components/TierGate';
+import { useTier } from '@/lib/subscription';
 import { vehicleName, fmtMiles, fmtMoney } from '@/lib/fleet';
 import {
   SERVICE_SCHEDULER_TIER, OWNERSHIP_OPTIONS, ownershipLabel,
   SCHEDULED_SERVICE_TYPES, scheduledServiceTypeLabel,
   parseScheduledServices, buildScheduledService,
   serviceScheduleStatus, applyServiceDone, applyServiceCancel,
-  applyServiceRemove,
+  applyServiceRemove, canCreateScheduledService,
+  countScheduledServicesAcrossAccount,
 } from '@/lib/fleetScheduling';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -66,6 +75,15 @@ export default function ServiceScheduler() {
   const [saving, setSaving] = useState('');
   const [error, setError] = useState('');
 
+  // AH-H8 first-free rule: the account's first scheduled service is
+  // free; the 2nd and beyond need Plus or Pro. While the tier is
+  // still loading we do NOT enforce the gate (a Plus user must
+  // never flash the upsell) — createBlocked stays false until the
+  // tier is known. Editing / done / cancel are never gated.
+  const { tier, loading: tierLoading } = useTier();
+  const totalScheduled = countScheduledServicesAcrossAccount(vehicles);
+  const createBlocked = !tierLoading && !canCreateScheduledService(vehicles, tier);
+
   const load = async () => {
     setError('');
     try {
@@ -98,6 +116,11 @@ export default function ServiceScheduler() {
   };
 
   const addService = (v) => {
+    // AH-H8 backstop: the Schedule button is disabled when blocked,
+    // but never save through the gate if the check somehow runs
+    // first — the inline upsell card (rendered when createBlocked)
+    // is already visible, so just return.
+    if (!tierLoading && !canCreateScheduledService(vehicles, tier)) return;
     const item = buildScheduledService(formFor(v));
     // AH-H5: a form with no date and no mileage used to do nothing at all.
     if (!item) { setError('Set a date, a mileage, or both before scheduling a service.'); return; }
@@ -340,9 +363,34 @@ export default function ServiceScheduler() {
                     className={inputCls}
                   />
                 </div>
+                {/* AH-H8: first scheduled service is free per account;
+                    the 2nd and beyond need Plus. Blocked Free users get
+                    this inline upsell — never a silent block, never a popup.
+                    Editing / done / cancel above are ungated. */}
+                {createBlocked ? (
+                  <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Lock size={18} className="text-primary" />
+                      <span className="font-display font-semibold uppercase text-sm tracking-wide">
+                        Your first scheduled service was free — the next one needs Plus
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Plus is $10/mo and unlocks unlimited scheduling, plus the upcoming-services list on Fleet Status. Your services already scheduled stay yours to edit, mark done, or cancel.
+                    </p>
+                    <Link
+                      to="/subscribe"
+                      className="tap-target inline-flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-display font-bold uppercase tracking-wide text-sm py-3"
+                    >
+                      <Crown size={16} /> See Plus — $10/mo
+                    </Link>
+                  </div>
+                ) : (!tierLoading && tier === 'free' && totalScheduled === 0) ? (
+                  <p className="text-xs text-muted-foreground">Your first scheduled service is free — after that, scheduling more needs Plus ($10/mo).</p>
+                ) : null}
                 <button
                   onClick={() => addService(v)}
-                  disabled={saving === v.id || (!f.date.trim() && !f.miles.trim())}
+                  disabled={saving === v.id || (!f.date.trim() && !f.miles.trim()) || createBlocked}
                   className={saveBtnCls}
                 >
                   {saving === v.id ? 'Saving…' : 'Schedule service'}
@@ -365,7 +413,7 @@ export default function ServiceScheduler() {
         <CalendarClock size={26} className="text-primary" /> Service scheduler
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on Fleet Status.
+        Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on Fleet Status. Your first scheduled service is free — scheduling more needs Plus ($10/mo).
       </p>
 
       {error && (

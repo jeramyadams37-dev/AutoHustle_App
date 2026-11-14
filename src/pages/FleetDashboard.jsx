@@ -1,6 +1,13 @@
 // Fleet Status — Pro-only, on-device only, no server.
 // One screen: every garage vehicle with its status, next service due,
 // and cost / downtime, plus a fleet-wide summary at the top.
+// EXCEPTION (AH-H8, decided 2026-11-14): the "Upcoming scheduled
+// services" list below is Plus-or-Pro, not Pro-only — it is carved
+// out of the Pro TierGate into its own Plus TierGate so Plus members
+// can reach it. The rest of this page (summary, per-vehicle status,
+// costs, downtime) stays Pro. A Free user sees the Plus locked card
+// for the list; their own services are still visible per vehicle in
+// the Service scheduler, where the first one is free.
 // Next service: the owner's manual interval on the Vehicle wins
 // (service_miles_next / service_date_next); otherwise it is computed
 // from the per-type last-service records the owner enters here
@@ -24,7 +31,7 @@ import {
   nextServiceFor, vehicleStatus, fleetSummary,
 } from '@/lib/fleetDashboard';
 import {
-  scheduledServiceTypeLabel, upcomingServices,
+  scheduledServiceTypeLabel, upcomingServices, UPCOMING_SERVICES_TIER,
 } from '@/lib/fleetScheduling';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -44,6 +51,49 @@ function verdictWord(v) {
 }
 
 const STATUS_RANK = { fail: 0, warn: 1, pass: 2 };
+
+// Upcoming scheduled services — the fleet-wide view of the Service
+// Scheduler. Rendered inside the Plus TierGate on this page (AH-H8):
+// one definition, used once below. Overdue red, due within 7 days /
+// 500 mi amber.
+function UpcomingServicesList({ upcoming }) {
+  return (
+    <>
+      <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
+        <CalendarClock size={20} className="text-primary" /> Upcoming scheduled services
+      </h2>
+      {upcoming.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          No services scheduled.{' '}
+          <Link to="/service-scheduler" className="text-primary">Schedule one from the Service scheduler</Link> — your first one is free.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {upcoming.map(({ vehicle, item, status }) => (
+            <div key={item.id} className={`rounded-2xl border px-4 py-3 ${status.state === 'overdue' ? 'border-red-500/40 bg-red-500/10' : status.state === 'due-soon' ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-card'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-display font-semibold text-sm">
+                    {scheduledServiceTypeLabel(item.type, item.customLabel)} — {vehicleName(vehicle)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{status.label}</div>
+                  {(item.shop || item.costEstimate) && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {item.shop || ''}{item.shop && item.costEstimate ? ' · ' : ''}{item.costEstimate ? `est. ${fmtMoney(item.costEstimate)}` : ''}
+                    </div>
+                  )}
+                </div>
+                <Link to={`/service-scheduler?vehicle=${vehicle.id}`} className="tap-target shrink-0 inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs">
+                  <Wrench size={14} /> Manage
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function FleetDashboard() {
   const navigate = useNavigate();
@@ -345,8 +395,21 @@ export default function FleetDashboard() {
         <LayoutDashboard size={26} className="text-primary" /> Fleet Status
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Pro — every vehicle, its status, and its next service, on one screen. Most urgent first. Everything stays on this phone.
+        Pro — every vehicle, its status, and its next service, on one screen. Most urgent first. Everything stays on this phone. The upcoming scheduled services list below is open to Plus and Pro.
       </p>
+
+      {/* Upcoming scheduled services — AH-H8: Plus-or-Pro, carved
+          out of the Pro gate below so Plus members can reach the
+          list. Free sees the Plus locked card here; their own
+          services are still visible per vehicle in the Service
+          scheduler, where the first one is free. */}
+      <TierGate required={UPCOMING_SERVICES_TIER} feature="Upcoming scheduled services">
+        {loading ? (
+          <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>
+        ) : (
+          <UpcomingServicesList upcoming={upcoming} />
+        )}
+      </TierGate>
 
       <TierGate required="pro" feature="Fleet Status">
         {loading ? (
@@ -393,42 +456,6 @@ export default function FleetDashboard() {
                 </div>
               </div>
             </div>
-
-            {/* Upcoming scheduled services — fleet-wide view of the
-                Service Scheduler (garage-level, works with no fleet).
-                Overdue red, due within 7 days / 500 mi amber. */}
-            <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
-              <CalendarClock size={20} className="text-primary" /> Upcoming scheduled services
-            </h2>
-            {upcoming.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                No services scheduled.{' '}
-                <Link to="/service-scheduler" className="text-primary">Schedule one from the Service scheduler</Link> — it works for every vehicle, fleet or not.
-              </p>
-            ) : (
-              <div className="mt-3 space-y-2">
-                {upcoming.map(({ vehicle, item, status }) => (
-                  <div key={item.id} className={`rounded-2xl border px-4 py-3 ${status.state === 'overdue' ? 'border-red-500/40 bg-red-500/10' : status.state === 'due-soon' ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-display font-semibold text-sm">
-                          {scheduledServiceTypeLabel(item.type, item.customLabel)} — {vehicleName(vehicle)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{status.label}</div>
-                        {(item.shop || item.costEstimate) && (
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {item.shop || ''}{item.shop && item.costEstimate ? ' · ' : ''}{item.costEstimate ? `est. ${fmtMoney(item.costEstimate)}` : ''}
-                          </div>
-                        )}
-                      </div>
-                      <Link to={`/service-scheduler?vehicle=${vehicle.id}`} className="tap-target shrink-0 inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs">
-                        <Wrench size={14} /> Manage
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             <div className="mt-5 space-y-4">
               {rows.map(renderRow)}

@@ -43,20 +43,62 @@
 // next-service updates from the done job (manual interval, if set,
 // still wins, same as before).
 //
-// TIER — change this ONE constant to change the gating:
-//   'free'  — the scheduler is a garage feature, and the garage
-//             is Free tier, so every user gets it (current choice).
-//   'plus'  — gate it behind Plus.   'pro' — gate it behind Pro.
-// The ServiceScheduler page wraps itself in
-// <TierGate required={SERVICE_SCHEDULER_TIER}>, and TierGate
-// passes everyone through when the required tier is 'free'
-// (tierMeets(anything, 'free') is true), so flipping this one
-// constant is the whole change. The fleet-wide upcoming-services
-// view stays inside the Pro Fleet dashboard regardless — that is
-// a fleet view, not the scheduler itself.
+// TIER (AH-H8, decided 2026-11-14): first scheduled service FREE
+// per account, then Plus.
+//   - The scheduler PAGE stays open to every tier: it wraps itself
+//     in <TierGate required={SERVICE_SCHEDULER_TIER}> with 'free'
+//     below, so TierGate passes everyone through. A Free user must
+//     still reach the page to see, edit, mark done, and cancel the
+//     services they already have — never hold an existing service
+//     hostage.
+//   - CREATING is gated per account by canCreateScheduledService():
+//     the first scheduled service (count 0) is free for any tier;
+//     the 2nd and beyond need Plus or Pro. The count is the total
+//     across ALL vehicles (see countScheduledServicesAcrossAccount)
+//     — a fleet owner with 10 vehicles does not get 10 free ones.
+//     FREE_SCHEDULED_SERVICES_PER_ACCOUNT is the one-line flip:
+//     raise it to give more free ones, or change the helper to
+//     count per vehicle if the rule ever becomes per-vehicle.
+//   - The fleet-wide "Upcoming scheduled services" view is Plus:
+//     UPCOMING_SERVICES_TIER below. It is carved out of the Pro
+//     Fleet Status gate on FleetDashboard.jsx, so Plus members see
+//     the list there while the rest of the dashboard stays Pro.
 import { SERVICE_TYPES, parseServiceLast } from './fleetDashboard.js';
 
 export const SERVICE_SCHEDULER_TIER = 'free';
+
+// Fleet-wide upcoming-services view tier (AH-H8): Plus members
+// see the list on Fleet Status; Free sees the Plus locked card.
+export const UPCOMING_SERVICES_TIER = 'plus';
+
+// Free scheduled services per account (AH-H8). One free taste so
+// the user sees how useful scheduling is; after that, creating
+// more needs Plus (or Pro). Per ACCOUNT, not per vehicle.
+export const FREE_SCHEDULED_SERVICES_PER_ACCOUNT = 1;
+
+// Total scheduled services on this account: the sum of every
+// vehicle's fleet_scheduled_services array length. Done and
+// cancelled items still count — the freebie is one scheduled
+// service ever, not one live at a time. (Removing a service with
+// the trash button does drop it from the count.)
+export function countScheduledServicesAcrossAccount(vehicles) {
+  let n = 0;
+  for (const v of vehicles || []) n += parseScheduledServices(v).length;
+  return n;
+}
+
+// Rank mirror of TIER_RANK in subscription.js (kept local so this
+// file stays importable in plain node tests — keep in step).
+const TIER_RANK = { free: 0, plus: 1, pro: 2 };
+
+// May this account create another scheduled service? Yes when the
+// account still has a free one left (count < the free allowance),
+// or when its tier is Plus or Pro. Editing, marking done, and
+// cancelling existing services are NOT gated — only creating is.
+export function canCreateScheduledService(vehicles, tier) {
+  if (countScheduledServicesAcrossAccount(vehicles) < FREE_SCHEDULED_SERVICES_PER_ACCOUNT) return true;
+  return (TIER_RANK[tier] || 0) >= TIER_RANK.plus;
+}
 
 // Due-soon thresholds — same as the dashboard's attention rule so
 // a service never reads "due soon" in one place and "fine" in
