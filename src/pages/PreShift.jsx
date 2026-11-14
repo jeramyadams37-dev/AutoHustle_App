@@ -29,6 +29,7 @@ export default function PreShift() {
   const [verdict, setVerdict] = useState(null);
   const [liveUsed, setLiveUsed] = useState(false);
   const [manual, setManual] = useState({ warningLight: false, tempGaugeHigh: false, slowCrank: false });
+  const [odometer, setOdometer] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -40,6 +41,12 @@ export default function PreShift() {
       } catch (e) { /* ignore */ }
     })();
   }, []);
+  // Pre-fill the odometer from the vehicle's last known mileage.
+  // The driver can still edit it; a blank field stays blank.
+  useEffect(() => {
+    const v = vehicles.find((x) => x.id === vehicleId) || null;
+    setOdometer((prev) => (prev === '' && v && v.mileage ? String(v.mileage) : prev));
+  }, [vehicleId, vehicles]);
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) || null;
   const vehicleSummary = vehicle
@@ -121,11 +128,18 @@ export default function PreShift() {
     // Fleet: remember this run so the Fleet dashboard can show the latest
     // verdict per vehicle. On-device only — nothing leaves the phone.
     try {
+      const odoParsed = parseInt(odometer, 10);
+      const odoVal = Number.isFinite(odoParsed) && odoParsed > 0 ? odoParsed : null;
       const risk = v === 'fail' ? daily : v === 'warn' ? Math.round(daily / 2) : 0;
       base44.entities.PreShiftCheck.create({
         vehicle_id: vehicleId, verdict: v, checks: list,
-        earnings: daily, at_risk: risk, live_used: usedLive,
+        earnings: daily, at_risk: risk, live_used: usedLive, odometer: odoVal,
       });
+      // Fleet: a higher odometer moves the vehicle's mileage forward so
+      // cost/mile stays right. Never lower it.
+      if (odoVal !== null && vehicle && Number(vehicle.mileage || 0) < odoVal) {
+        try { await base44.entities.Vehicle.update(vehicleId, { mileage: odoVal }); } catch (e2) { /* ignore */ }
+      }
     } catch (e) { /* fleet history is best-effort; the check itself already ran */ }
     setRunning(false);
   };
@@ -173,6 +187,17 @@ export default function PreShift() {
             inputMode="decimal"
             value={earnings}
             onChange={(e) => setEarnings(e.target.value)}
+            className="tap-target w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Odometer reading (mi)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={odometer}
+            onChange={(e) => setOdometer(e.target.value)}
+            placeholder={vehicle && vehicle.mileage ? `Last known: ${Number(vehicle.mileage).toLocaleString('en-US')} mi` : 'Odometer now'}
             className="tap-target w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
           />
         </div>

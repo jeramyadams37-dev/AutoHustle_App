@@ -43,7 +43,7 @@ const entity = (name) => ({
 const noAuth = async () => { throw new Error('Not available in this version.'); };
 
 export const base44 = {
-  entities: { Ticket: entity('Ticket'), Vehicle: entity('Vehicle'), PreShiftCheck: entity('PreShiftCheck'), FleetCost: entity('FleetCost'), FleetDowntime: entity('FleetDowntime') },
+  entities: { Ticket: entity('Ticket'), Vehicle: entity('Vehicle'), PreShiftCheck: entity('PreShiftCheck'), FleetCost: entity('FleetCost'), FleetDowntime: entity('FleetDowntime'), FleetContract: entity('FleetContract'), FleetDriver: entity('FleetDriver'), FleetDocument: entity('FleetDocument'), FleetDispatch: entity('FleetDispatch') },
   functions: { invoke: invokeFunction },
   app: { getPublicSettings: async () => ({ id: 'local', public_settings: {} }) },
   auth: {
