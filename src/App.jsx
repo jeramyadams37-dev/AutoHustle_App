@@ -29,6 +29,7 @@ import { initFleetPush } from '@/lib/fleetPush';
 import FleetLive from '@/pages/FleetLive';
 import FleetDashboard from '@/pages/FleetDashboard';
 import ServiceScheduler from '@/pages/ServiceScheduler';
+import { DriveBackupCheck } from '@/components/GarageBackup';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -95,6 +96,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <FleetPushTapHandler />
+          <DriveBackupCheck />
           <AuthenticatedApp />
         </Router>
         <Toaster />

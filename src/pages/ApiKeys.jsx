@@ -6,7 +6,7 @@
 // paste it below, save. Done.
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, ExternalLink, Trash2, LogOut, Check, ArrowLeft } from 'lucide-react';
+import { KeyRound, ExternalLink, Trash2, LogOut, Check, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { saveGeminiKey, clearGeminiKey, maskedKey, hasGeminiKey, AI_STUDIO_URL } from '@/lib/apiKeys';
 import { getCurrentAccount, signOut } from '@/lib/accounts';
 import { Button } from '@/components/ui/button';
@@ -119,6 +119,15 @@ export default function ApiKeys() {
           </div>
         )}
       </div>
+
+      {/* Garage backup */}
+      <Link to="/garage" className="mt-4 rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
+        <ShieldCheck size={18} className="text-primary shrink-0" />
+        <span>
+          <span className="font-display font-semibold uppercase tracking-wide text-xs">Back up your garage</span>
+          <span className="block text-sm text-muted-foreground mt-0.5">Export your vehicles, tickets and documents to a file — or back them up to your own Google Drive automatically.</span>
+        </span>
+      </Link>
 
       {/* Stores note */}
       <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground leading-relaxed">
