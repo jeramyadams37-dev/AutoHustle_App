@@ -17,9 +17,6 @@ const PLANS = [
     blurb: 'For drivers who want the full mechanic in their pocket.',
     features: [
       'Parts prices, nearby stores & labor on every ticket',
-      'PDF shop tickets',
-      'Unlimited AI diagnoses',
-      'Pre-shift Driver Uptime check',
     ],
   },
   {

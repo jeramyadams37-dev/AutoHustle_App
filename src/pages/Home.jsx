@@ -7,6 +7,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ tickets: 0, vehicles: 0 });
   const [recent, setRecent] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -18,7 +19,10 @@ export default function Home() {
         ]);
         setStats({ tickets: tc, vehicles: vc });
         setRecent(tpage.items || []);
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        // AH-H5: a failed load used to show "0 vehicles · 0 tickets".
+        setLoadError('Could not load your garage — check your connection and pull to refresh.');
+      }
     })();
   }, []);
 
@@ -65,7 +69,7 @@ export default function Home() {
             <Link to="/garage" className="tap-target rounded-2xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition">
               <Car size={20} className="text-primary" />
               <span className="font-display font-semibold uppercase text-sm tracking-wide">My Garage</span>
-              <span className="text-xs text-muted-foreground">{stats.vehicles} vehicles · {stats.tickets} tickets</span>
+              <span className="text-xs text-muted-foreground">{loadError || `${stats.vehicles} vehicles · ${stats.tickets} tickets`}</span>
             </Link>
             <Link to="/subscribe" className="tap-target col-span-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col gap-1 hover:border-amber-500/60 transition">
               <Crown size={20} className="text-primary" />
@@ -94,7 +98,7 @@ export default function Home() {
         </div>
         {recent.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center text-muted-foreground text-sm">
-            No tickets yet. Start your first diagnosis above.
+            {loadError || 'No tickets yet. Start your first diagnosis above.'}
           </div>
         ) : (
           <div className="space-y-2">

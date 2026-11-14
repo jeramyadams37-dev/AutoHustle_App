@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Download, Share2, Loader2, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { exportTicketPDF } from '@/lib/pdfExport';
 import TicketHeader from '@/components/ticket/TicketHeader';
@@ -32,6 +32,8 @@ export default function TicketDetail() {
   const { toast } = useToast();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [rerank, setRerank] = useState(null);
   const [reranking, setReranking] = useState(false);
   const [tab, setTab] = useState('diagnose');
@@ -42,12 +44,15 @@ export default function TicketDetail() {
         const t = await base44.entities.Ticket.get(id);
         setTicket(t);
         setRerank(t.checklist_state?.rerank || null);
-      } catch (e) {} finally { setLoading(false); }
+      } catch (e) {
+        // AH-H5: a failed load used to look like "Ticket not found".
+        setLoadError('Could not load this ticket — check your connection and try again.');
+      } finally { setLoading(false); }
     })();
   }, [id]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="text-primary animate-spin" /></div>;
-  if (!ticket) return <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"><p className="text-muted-foreground">Ticket not found.</p><button onClick={() => navigate('/garage')} className="mt-3 text-primary text-sm">Back to Garage</button></div>;
+  if (!ticket) return <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"><p className="text-muted-foreground">{loadError || 'Ticket not found.'}</p>{loadError ? <button onClick={() => window.location.reload()} className="mt-3 text-primary text-sm">Retry</button> : null}<button onClick={() => navigate('/garage')} className="mt-3 text-primary text-sm">Back to Garage</button></div>;
 
   const d = ticket.ticket_data || {};
   const progress = ticket.checklist_state?.items || {};
@@ -56,7 +61,7 @@ export default function TicketDetail() {
   const persist = async (nextState) => {
     const updated = { ...ticket, checklist_state: nextState };
     setTicket(updated);
-    try { await base44.entities.Ticket.update(ticket.id, { checklist_state: nextState }); } catch (e) {}
+    try { await base44.entities.Ticket.update(ticket.id, { checklist_state: nextState }); } catch (e) { toast({ title: 'Could not save that change', description: 'Check your connection and try again.', variant: 'destructive' }); }
   };
 
   const onToggle = (itemId) => {
@@ -106,6 +111,18 @@ export default function TicketDetail() {
     return d.flowchart.nodes[0].id;
   })();
 
+  // AH-B2: confirmed delete — this is what removes the test Civic ticket.
+  const deleteTicket = async () => {
+    if (!window.confirm(`Delete this ticket for ${ticket.vehicle_summary || 'this vehicle'}? This can't be undone.`)) return;
+    setDeleting(true);
+    try {
+      await base44.entities.Ticket.delete(ticket.id);
+      navigate('/garage');
+    } catch (e) {
+      toast({ title: 'Could not delete that ticket', description: 'Check your connection and try again.', variant: 'destructive' });
+    } finally { setDeleting(false); }
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -128,6 +145,9 @@ export default function TicketDetail() {
           </button>
           <button onClick={handleShare} className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-sm hover:border-primary/40">
             <Share2 size={16} /> Share
+          </button>
+          <button onClick={deleteTicket} disabled={deleting} aria-label="Delete ticket" className="tap-target inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-500/40 bg-card text-sm text-red-400 hover:border-red-500/60 disabled:opacity-50">
+            <Trash2 size={16} /> {deleting ? 'Deleting…' : 'Delete'}
           </button>
         </div>
       </div>

@@ -64,12 +64,14 @@ export default function ServiceScheduler() {
   const [doneForms, setDoneForms] = useState({});
   const [doneOpenId, setDoneOpenId] = useState(null);
   const [saving, setSaving] = useState('');
+  const [error, setError] = useState('');
 
   const load = async () => {
+    setError('');
     try {
       const r = await base44.entities.Vehicle.filter({}, { sort: '-created_date', limit: 100 });
       setVehicles(r.items || []);
-    } catch { setVehicles([]); } finally { setLoading(false); }
+    } catch { setVehicles([]); setError('Could not load your vehicles — check your connection and try again.'); } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -88,7 +90,7 @@ export default function ServiceScheduler() {
     try {
       const updated = await base44.entities.Vehicle.update(v.id, patch);
       setVehicles((vs) => vs.map((x) => (x.id === v.id ? updated : x)));
-    } catch (e) { /* ignore */ } finally { setSaving(''); }
+    } catch (e) { setError('Could not save that change — check your connection and try again.'); } finally { setSaving(''); }
   };
 
   const saveOwnership = (v, value) => {
@@ -97,7 +99,8 @@ export default function ServiceScheduler() {
 
   const addService = (v) => {
     const item = buildScheduledService(formFor(v));
-    if (!item) return;
+    // AH-H5: a form with no date and no mileage used to do nothing at all.
+    if (!item) { setError('Set a date, a mileage, or both before scheduling a service.'); return; }
     const items = [...parseScheduledServices(v), item];
     updateVehicle(v, { fleet_scheduled_services: JSON.stringify(items) });
     setForms((m) => ({ ...m, [v.id]: blankForm() }));
@@ -105,7 +108,7 @@ export default function ServiceScheduler() {
 
   const markDone = (v, item) => {
     const res = applyServiceDone(v, item.id, doneFor(v, item));
-    if (!res) return;
+    if (!res) { setError('Could not mark that service done — it may already be done or cancelled.'); return; }
     updateVehicle(v, {
       fleet_scheduled_services: res.scheduledServices,
       fleet_service_last: res.serviceLast,
@@ -116,6 +119,7 @@ export default function ServiceScheduler() {
   const cancelService = (v, item) => {
     const json = applyServiceCancel(v, item.id);
     if (json) updateVehicle(v, { fleet_scheduled_services: json });
+    else setError('Could not cancel that service — it may already be done or cancelled.');
   };
 
   const removeService = (v, item) => {
@@ -362,6 +366,12 @@ export default function ServiceScheduler() {
         Schedule a service per vehicle — date, mileage, shop, notes, cost estimate. No fleet needed, no lease needed: it works for every vehicle in your garage, owned, leased, or financed. Marking one done updates the next-service date on the fleet dashboard.
       </p>
 
+      {error && (
+        <div role="alert" className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm">
+          {error}{' '}
+          <button onClick={() => { setError(''); load(); }} className="font-semibold text-primary">Retry</button>
+        </div>
+      )}
       <TierGate required={SERVICE_SCHEDULER_TIER} feature="Service scheduler">
         {loading ? (
           <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>

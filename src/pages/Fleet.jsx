@@ -92,22 +92,24 @@ export default function Fleet() {
   const [docForm, setDocForm] = useState({});
   const [saving, setSaving] = useState('');
   const [pdfBusy, setPdfBusy] = useState('');
+  const [fleetError, setFleetError] = useState('');
 
   const load = async () => {
     // Each entity loads on its own so one missing table never blanks
     // the whole page (e.g. PreShiftCheck before the first saved run).
-    const safe = async (fn) => {
-      try { const r = await fn(); return r.items || []; } catch { return []; }
+    const failed = [];
+    const safe = async (fn, key) => {
+      try { const r = await fn(); return r.items || []; } catch { failed.push(key); return []; }
     };
     const [vp, cp, fp, dp, ct, dr, dc, ds] = await Promise.all([
-      safe(() => base44.entities.Vehicle.filter({}, { sort: '-created_date', limit: 100 })),
-      safe(() => base44.entities.PreShiftCheck.filter({}, { sort: '-created_date', limit: 200 })),
-      safe(() => base44.entities.FleetCost.filter({}, { sort: '-date', limit: 500 })),
-      safe(() => base44.entities.FleetDowntime.filter({}, { sort: '-start_date', limit: 200 })),
-      safe(() => base44.entities.FleetContract.filter({}, { sort: '-created_date', limit: 200 })),
-      safe(() => base44.entities.FleetDriver.filter({}, { sort: '-created_date', limit: 100 })),
-      safe(() => base44.entities.FleetDocument.filter({}, { sort: '-created_date', limit: 500 })),
-      safe(() => base44.entities.FleetDispatch.filter({}, { sort: '-created_date', limit: 500 })),
+      safe(() => base44.entities.Vehicle.filter({}, { sort: '-created_date', limit: 100 }), 'vehicles'),
+      safe(() => base44.entities.PreShiftCheck.filter({}, { sort: '-created_date', limit: 200 }), 'checks'),
+      safe(() => base44.entities.FleetCost.filter({}, { sort: '-date', limit: 500 }), 'costs'),
+      safe(() => base44.entities.FleetDowntime.filter({}, { sort: '-start_date', limit: 200 }), 'downtime'),
+      safe(() => base44.entities.FleetContract.filter({}, { sort: '-created_date', limit: 200 }), 'contracts'),
+      safe(() => base44.entities.FleetDriver.filter({}, { sort: '-created_date', limit: 100 }), 'drivers'),
+      safe(() => base44.entities.FleetDocument.filter({}, { sort: '-created_date', limit: 500 }), 'documents'),
+      safe(() => base44.entities.FleetDispatch.filter({}, { sort: '-created_date', limit: 500 }), 'dispatch'),
     ]);
     setVehicles(vp);
     setChecks(cp);
@@ -117,6 +119,10 @@ export default function Fleet() {
     setDrivers(dr);
     setDocs(dc);
     setDispatch(ds);
+    // AH-H5: a failed load used to look like an empty fleet (0 vehicles).
+    if (failed.includes('vehicles')) setFleetError('Could not load your fleet — check your connection and try again.');
+    else if (failed.length) setFleetError(`Could not load: ${failed.join(', ')} — those sections may look empty. Check your connection and try again.`);
+    else setFleetError('');
     setLoading(false);
   };
 
@@ -155,7 +161,7 @@ export default function Fleet() {
     try {
       const updated = await base44.entities.Vehicle.update(v.id, patch);
       setVehicles((vs) => vs.map((x) => (x.id === v.id ? updated : x)));
-    } catch (e) { /* ignore */ } finally { setSaving(''); }
+    } catch (e) { setFleetError('Could not save that change — check your connection and try again.'); } finally { setSaving(''); }
   };
 
   const saveDriver = (v) => {
@@ -168,6 +174,11 @@ export default function Fleet() {
 
   const saveService = (v) => {
     const f = sForm(v);
+    // AH-H5: a blank form used to "save" silently (and wipe the interval).
+    if (!(f.every || '').toString().trim() && !(f.nextMiles || '').toString().trim() && !(f.nextDate || '').trim()) {
+      setFleetError('Set a service interval, a next mileage, or a next date first.');
+      return;
+    }
     const every = parseInt(f.every, 10);
     let nextMiles = parseInt(f.nextMiles, 10);
     // If only the interval is set, work out the next service from the
@@ -185,7 +196,7 @@ export default function Fleet() {
   const addCost = async (v) => {
     const f = cForm(v);
     const amount = parseFloat(f.amount);
-    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (!Number.isFinite(amount) || amount <= 0) { setFleetError('Enter an amount over $0 to log a cost.'); return; }
     setSaving('cost-' + v.id);
     try {
       await base44.entities.FleetCost.create({
@@ -194,13 +205,13 @@ export default function Fleet() {
       });
       setCostForm((m) => ({ ...m, [v.id]: { category: 'parts', amount: '', date: todayISO(), note: '' } }));
       await load();
-    } catch (e) { /* ignore */ } finally { setSaving(''); }
+    } catch (e) { setFleetError('Could not log that cost — check your connection and try again.'); } finally { setSaving(''); }
   };
 
   const addDowntime = async (v) => {
     const f = wForm(v);
-    if (!f.start || !f.end) return;
-    if (new Date(f.end + 'T00:00:00') < new Date(f.start + 'T00:00:00')) return;
+    if (!f.start || !f.end) { setFleetError('Pick a start and an end date for the downtime.'); return; }
+    if (new Date(f.end + 'T00:00:00') < new Date(f.start + 'T00:00:00')) { setFleetError('The end date has to be on or after the start date.'); return; }
     setSaving('down-' + v.id);
     try {
       await base44.entities.FleetDowntime.create({
@@ -208,11 +219,16 @@ export default function Fleet() {
       });
       setDownForm((m) => ({ ...m, [v.id]: { start: todayISO(), end: todayISO(), reason: '' } }));
       await load();
-    } catch (e) { /* ignore */ } finally { setSaving(''); }
+    } catch (e) { setFleetError('Could not log that downtime — check your connection and try again.'); } finally { setSaving(''); }
   };
 
-  const deleteRow = async (entity, id) => {
-    try { await base44.entities[entity].delete(id); await load(); } catch (e) { /* ignore */ }
+  // AH-H1: every fleet delete asks first (same window.confirm pattern
+  // as FleetLive cancels / ServiceScheduler removes). Returns true only
+  // when the row was actually deleted, so callers can close panels.
+  const deleteRow = async (entity, id, label) => {
+    if (!window.confirm(`Delete ${label || 'this item'}? This can't be undone.`)) return false;
+    try { await base44.entities[entity].delete(id); await load(); return true; }
+    catch (e) { setFleetError(`Could not delete ${label || 'that item'} — check your connection and try again.`); return false; }
   };
 
   // --- Vehicle photo ---
@@ -258,7 +274,7 @@ export default function Fleet() {
     try {
       await base44.entities.FleetContract.update(c.id, { status: 'ended', end_date: c.end_date || todayISO() });
       await load();
-    } catch (e) { /* ignore */ }
+    } catch (e) { setFleetError('Could not end that contract — check your connection and try again.'); }
   };
 
   const downloadContract = async (c, v) => {
@@ -515,7 +531,7 @@ export default function Fleet() {
                           {c.status === 'active' && (
                             <button onClick={() => endContract(c)} className="tap-target px-2 py-1 text-xs text-muted-foreground hover:text-amber-400">End</button>
                           )}
-                          <button onClick={() => deleteRow('FleetContract', c.id)} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete contract">
+                          <button onClick={() => deleteRow('FleetContract', c.id, 'this contract')} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete contract">
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -811,7 +827,7 @@ export default function Fleet() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="font-display font-semibold">{fmtMoney(c.amount)}</span>
-                        <button onClick={() => deleteRow('FleetCost', c.id)} className="tap-target text-muted-foreground hover:text-red-400" aria-label="Delete cost">
+                        <button onClick={() => deleteRow('FleetCost', c.id, 'this cost entry')} className="tap-target text-muted-foreground hover:text-red-400" aria-label="Delete cost">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -866,7 +882,7 @@ export default function Fleet() {
                         <span className="font-medium">{d.start_date} → {d.end_date}</span>
                         {d.reason && <span className="text-muted-foreground"> — {d.reason}</span>}
                       </div>
-                      <button onClick={() => deleteRow('FleetDowntime', d.id)} className="tap-target text-muted-foreground hover:text-red-400 shrink-0" aria-label="Delete downtime">
+                      <button onClick={() => deleteRow('FleetDowntime', d.id, 'this downtime entry')} className="tap-target text-muted-foreground hover:text-red-400 shrink-0" aria-label="Delete downtime">
                         <Trash2 size={15} />
                       </button>
                     </div>
@@ -891,7 +907,7 @@ export default function Fleet() {
                         <button onClick={() => viewDocument(d)} className="tap-target p-2 text-muted-foreground hover:text-primary" aria-label="View document">
                           <Eye size={16} />
                         </button>
-                        <button onClick={() => deleteRow('FleetDocument', d.id)} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete document">
+                        <button onClick={() => deleteRow('FleetDocument', d.id, 'this document')} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete document">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -1064,7 +1080,7 @@ export default function Fleet() {
                 <button onClick={saveDriverProfile} disabled={saving === 'driver-profile'} className={saveBtnCls}>
                   {saving === 'driver-profile' ? 'Saving…' : 'Save driver profile'}
                 </button>
-                <button onClick={() => { deleteRow('FleetDriver', d.id); setOpenDriverId(null); setDriverEdit(null); }} className="tap-target w-full text-xs text-muted-foreground hover:text-red-400 py-1">Delete this driver profile</button>
+                <button onClick={async () => { if (await deleteRow('FleetDriver', d.id, 'this driver profile')) { setOpenDriverId(null); setDriverEdit(null); } }} className="tap-target w-full text-xs text-muted-foreground hover:text-red-400 py-1">Delete this driver profile</button>
               </div>
             </div>
 
@@ -1194,7 +1210,7 @@ export default function Fleet() {
                         <button onClick={() => viewDocument(doc)} className="tap-target p-2 text-muted-foreground hover:text-primary" aria-label="View document">
                           <Eye size={16} />
                         </button>
-                        <button onClick={() => deleteRow('FleetDocument', doc.id)} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete document">
+                        <button onClick={() => deleteRow('FleetDocument', doc.id, 'this document')} className="tap-target p-2 text-muted-foreground hover:text-red-400" aria-label="Delete document">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -1262,6 +1278,12 @@ export default function Fleet() {
         Pro — every vehicle, its status, driver, service and costs, on one screen. Costs, contracts, and documents stay on this phone — live dispatch and driver locations go through the shared fleet backend (see Live dispatch + map below).
       </p>
 
+      {fleetError && (
+        <div role="alert" className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm">
+          {fleetError}{' '}
+          <button onClick={() => { setFleetError(''); load(); }} className="font-semibold text-primary">Retry</button>
+        </div>
+      )}
       <TierGate required="pro" feature="Fleet">
       <Link to="/fleet-live" className="tap-target mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
         <Radio size={16} /> Live dispatch + driver map

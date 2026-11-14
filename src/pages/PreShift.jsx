@@ -28,6 +28,8 @@ export default function PreShift() {
   const [checks, setChecks] = useState(null);
   const [verdict, setVerdict] = useState(null);
   const [liveUsed, setLiveUsed] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [manual, setManual] = useState({ warningLight: false, tempGaugeHigh: false, slowCrank: false });
   const [odometer, setOdometer] = useState('');
 
@@ -38,7 +40,10 @@ export default function PreShift() {
         const list = page.items || [];
         setVehicles(list);
         if (list.length) setVehicleId(list[0].id);
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        // AH-H5: a failed load used to show an empty vehicle list.
+        setLoadError('Could not load your vehicles — check your connection and try again.');
+      }
     })();
   }, []);
   // Pre-fill the odometer from the vehicle's last known mileage.
@@ -117,7 +122,8 @@ export default function PreShift() {
         list.push({ name: 'Recent tickets', status: 'pass', detail: 'No tickets in the last 7 days.' });
       }
     } catch (e) {
-      list.push({ name: 'Recent tickets', status: 'pass', detail: 'No ticket history found.' });
+      // AH-H5: a failed history load used to report a clean "pass".
+      list.push({ name: 'Recent tickets', status: 'warn', detail: 'Could not load ticket history — check recent tickets by hand.' });
     }
 
     setChecks(list);
@@ -138,9 +144,14 @@ export default function PreShift() {
       // Fleet: a higher odometer moves the vehicle's mileage forward so
       // cost/mile stays right. Never lower it.
       if (odoVal !== null && vehicle && Number(vehicle.mileage || 0) < odoVal) {
-        try { await base44.entities.Vehicle.update(vehicleId, { mileage: odoVal }); } catch (e2) { /* ignore */ }
+        await base44.entities.Vehicle.update(vehicleId, { mileage: odoVal });
       }
-    } catch (e) { /* fleet history is best-effort; the check itself already ran */ }
+    } catch (e) {
+      // AH-H5: the save used to fail silently — the check ran but no
+      // history was kept. The verdict above still stands; only the
+      // saved record is missing.
+      setSaveError('Check ran, but it could not be saved — no history or mileage update was kept. Check your connection and run it again if you need the record.');
+    }
     setRunning(false);
   };
 
@@ -164,6 +175,9 @@ export default function PreShift() {
         Two minutes before your shift: is {vehicleSummary} safe to earn with today?
       </p>
 
+      {loadError && (
+        <div role="alert" className="mt-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-3 text-sm">{loadError}</div>
+      )}
       <div className="mt-5 rounded-2xl border border-border bg-card p-4 space-y-3">
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Vehicle</label>
@@ -229,6 +243,7 @@ export default function PreShift() {
                 : `About $${atRisk} of today's $${daily} is at risk${verdict === 'fail' ? ' — a breakdown mid-shift costs the whole day.' : ' if this gets worse mid-shift.'}`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">{liveUsed ? 'Checked with live adapter data.' : 'Checked manually — connect the adapter for live readings.'}</p>
+            {saveError && <p role="alert" className="text-xs text-red-400 mt-2">{saveError}</p>}
           </div>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
             {checks.map((c, i) => (
