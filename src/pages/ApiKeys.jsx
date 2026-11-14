@@ -6,9 +6,10 @@
 // paste it below, save. Done.
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { KeyRound, ExternalLink, Trash2, LogOut, Check, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { KeyRound, ExternalLink, Trash2, LogOut, Check, ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react';
 import { saveGeminiKey, clearGeminiKey, maskedKey, hasGeminiKey, AI_STUDIO_URL } from '@/lib/apiKeys';
 import { getCurrentAccount, signOut } from '@/lib/accounts';
+import { resetTour, TOUR_START_EVENT } from '@/lib/onboardingTour';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +43,12 @@ export default function ApiKeys() {
   const handleSignOut = () => {
     signOut();
     navigate('/login', { replace: true });
+  };
+
+  const handleReplayTour = () => {
+    resetTour();
+    window.dispatchEvent(new Event(TOUR_START_EVENT));
+    navigate('/', { replace: true });
   };
 
   return (
@@ -128,6 +135,15 @@ export default function ApiKeys() {
           <span className="block text-sm text-muted-foreground mt-0.5">Export your vehicles, tickets and documents to a file — or back them up to your own Google Drive automatically.</span>
         </span>
       </Link>
+
+      {/* Tour replay */}
+      <button onClick={handleReplayTour} className="mt-4 w-full rounded-2xl border border-border bg-card p-4 flex items-center gap-3 text-left">
+        <ArrowRight size={18} className="text-primary shrink-0" />
+        <span>
+          <span className="font-display font-semibold uppercase tracking-wide text-xs">Take the tour again</span>
+          <span className="block text-sm text-muted-foreground mt-0.5">Walk through Home, New, Scan, Garage, Fleet, Codes and plans again — about a minute.</span>
+        </span>
+      </button>
 
       {/* Stores note */}
       <div className="mt-4 rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground leading-relaxed">
