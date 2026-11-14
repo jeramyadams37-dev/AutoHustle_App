@@ -75,6 +75,7 @@
     "react-hook-form": "^7.54.2",
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^4.2.1",
+    "leaflet": "^1.9.4",
     "react-markdown": "^9.0.1",
     "react-quill-new": "^3.8.3",
     "react-resizable-panels": "^2.1.7",

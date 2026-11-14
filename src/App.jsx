@@ -24,6 +24,7 @@ import PreShift from '@/pages/PreShift';
 import Subscribe from '@/pages/Subscribe';
 import ApiKeys from '@/pages/ApiKeys';
 import Fleet from '@/pages/Fleet';
+import FleetLive from '@/pages/FleetLive';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
           <Route path="/pre-shift" element={<PreShift />} />
           <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/fleet" element={<Fleet />} />
+          <Route path="/fleet-live" element={<FleetLive />} />
           <Route path="/settings" element={<ApiKeys />} />
         </Route>
       </Route>

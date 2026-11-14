@@ -25,7 +25,7 @@
 //                     body, pickup, dropoff, time, pay }
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSign, CalendarClock, Plus, Trash2, Loader2, Car, FileText, Camera, Download, Eye, User, Paperclip, ShieldCheck, FileSignature, X } from 'lucide-react';
+import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSign, CalendarClock, Plus, Trash2, Loader2, Car, FileText, Camera, Download, Eye, User, Paperclip, ShieldCheck, FileSignature, X, Radio } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import TierGate from '@/components/TierGate';
 import {
@@ -1174,7 +1174,7 @@ export default function Fleet() {
                 <button onClick={() => sendDispatch(d)} disabled={saving === 'dispatch-' + d.id} className={saveBtnCls}>
                   {saving === 'dispatch-' + d.id ? 'Sending…' : 'Send dispatch message'}
                 </button>
-                <p className="text-[11px] text-muted-foreground">On-device for now — messages live on this phone. The driver replies from here until cross-device dispatch is built.</p>
+                <p className="text-[11px] text-muted-foreground">On-device thread — messages live on this phone. For live dispatch to a driver's phone, use Live dispatch + map above.</p>
               </div>
             </div>
 
@@ -1259,10 +1259,13 @@ export default function Fleet() {
         <Truck size={26} className="text-primary" /> Fleet
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Pro — every vehicle, its status, driver, service and costs, on one screen. All of it stays on this phone.
+        Pro — every vehicle, its status, driver, service and costs, on one screen. Costs, contracts, and documents stay on this phone — live dispatch and driver locations go through the shared fleet backend (see Live dispatch + map below).
       </p>
 
       <TierGate required="pro" feature="Fleet">
+      <Link to="/fleet-live" className="tap-target mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/40 bg-primary/10 py-3 font-display font-bold uppercase tracking-wide text-sm">
+        <Radio size={16} /> Live dispatch + driver map
+      </Link>
         {loading ? (
           <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>
         ) : vehicles.length === 0 ? (
