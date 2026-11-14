@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bluetooth, Loader2, ArrowLeft, Wrench } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { diagnoseLive } from '@/lib/gemini';
+import { goBackOrHome } from '@/lib/goBack';
 import {
   connectObd2,
   readObd2Codes,
@@ -28,6 +29,7 @@ export default function Scan() {
   const [liveData, setLiveData] = useState(null);
   const [codes, setCodes] = useState([]);
   const [isDemo, setIsDemo] = useState(false);
+  const [cleanScan, setCleanScan] = useState(false);
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState('');
 
@@ -49,6 +51,7 @@ export default function Scan() {
     setResult(null);
     setLiveData(null);
     setCodes([]);
+    setCleanScan(false);
     setIsDemo(demo);
     try {
       let codeRes;
@@ -63,7 +66,17 @@ export default function Scan() {
         setStatus('Reading codes...');
         codeRes = await readObd2Codes();
         if (!codeRes.codes || codeRes.codes.length === 0) {
+          // AH-H4: a clean scan used to stop here — no live data, no
+          // ticket link. Still read live data and offer a ticket.
           setStatus('No trouble codes found. Vehicle looks clean.');
+          setCodes([]);
+          try {
+            live = await readObd2LiveData();
+            setLiveData(live);
+          } catch (err) {
+            // Live data unreadable; the clean status above still stands.
+          }
+          setCleanScan(true);
           setScanning(false);
           return;
         }
@@ -91,7 +104,7 @@ export default function Scan() {
 
   return (
     <div className="min-h-screen px-5 pt-5 pb-6">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <button onClick={() => goBackOrHome(navigate)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <ArrowLeft size={15} /> Back
       </button>
       <h1 className="mt-3 font-display font-bold text-3xl flex items-center gap-2">
@@ -155,6 +168,20 @@ export default function Scan() {
           </div>
         )}
       </div>
+
+      {cleanScan && (
+        <div className="mt-4 rounded-2xl border border-border bg-card p-4 space-y-3">
+          <h3 className="font-display font-bold text-xl">No trouble codes</h3>
+          <p className="text-sm leading-relaxed">No codes stored — the live readings above are from this vehicle. If something still feels wrong (a noise, a smell, a hesitation), start a ticket and describe it.</p>
+          <Link
+            to="/new"
+            state={{ vehicleId, dtcs: '' }}
+            className="tap-target mt-1 inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground font-display font-semibold uppercase text-sm tracking-wide px-4 py-2.5"
+          >
+            <Wrench size={16} /> Start a ticket for this vehicle
+          </Link>
+        </div>
+      )}
 
       {result && (
         <div className="mt-4 rounded-2xl border border-border bg-card p-4 space-y-3">

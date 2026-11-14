@@ -27,6 +27,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Truck, CheckCircle2, AlertTriangle, XCircle, Users, DollarSign, CalendarClock, Plus, Trash2, Loader2, Car, FileText, Camera, Download, Eye, User, Paperclip, ShieldCheck, FileSignature, X, Radio, LayoutDashboard } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { goBackOrHome } from '@/lib/goBack';
 import TierGate from '@/components/TierGate';
 import {
   vehicleName, fmtMoney, fmtMiles, serviceDue, latestCheckFor,
@@ -372,6 +373,9 @@ export default function Fleet() {
 
   const renderVehicle = (v) => {
     const check = latestCheckFor(checks, v.id);
+    // AH-H6: reason for a non-GO verdict — first failed/warned check item.
+    const failedItem = (check?.checks || []).find((c) => c.status === 'fail')
+      || (check?.checks || []).find((c) => c.status === 'warn');
     const vCosts = costsFor(v.id);
     const vDown = downFor(v.id);
     const vContracts = contractsFor(v.id);
@@ -409,6 +413,11 @@ export default function Fleet() {
               Last check {new Date(check.created_date).toLocaleDateString()}
               {check.odometer ? ` · ${fmtMiles(check.odometer)}` : ''}
               {check.at_risk ? ` · $${check.at_risk} was at risk` : ''}
+            </p>
+          )}
+          {check && check.verdict !== 'pass' && (
+            <p className={`text-xs mt-1 font-medium ${check.verdict === 'fail' ? 'text-red-400' : 'text-amber-400'}`}>
+              {failedItem ? `${failedItem.name}: ${failedItem.detail}` : check.verdict === 'fail' ? 'Pre-shift check says DO NOT DRIVE' : 'Pre-shift check was CAUTION'}
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
@@ -959,7 +968,7 @@ export default function Fleet() {
     );
   };
 
-  // --- Dispatch (owner <-> driver, on-device for now) ---
+  // --- On-device notes (owner <-> driver, on this phone only) ---
   const dispatchFor = (did) => dispatch
     .filter((m) => m.driver_id === did)
     .sort((a, b) => new Date(a.created_date || 0).getTime() - new Date(b.created_date || 0).getTime());
@@ -981,7 +990,7 @@ export default function Fleet() {
       });
       setDispatchForm((m) => ({ ...m, [d.id]: { sender: f.sender || 'owner', body: '', pickup: '', dropoff: '', time: '', pay: '' } }));
       await load();
-    } catch (e) { alert('Could not send that dispatch message.'); } finally { setSaving(''); }
+    } catch (e) { alert('Could not send that note.'); } finally { setSaving(''); }
   };
 
   const licenseDays = (d) => {
@@ -1100,15 +1109,15 @@ export default function Fleet() {
               )}
             </div>
 
-            {/* Dispatch thread */}
+            {/* On-device notes thread */}
             <div>
-              <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><FileText size={16} className="text-primary" /> Dispatch</h3>
+              <h3 className="font-display font-bold uppercase tracking-wide text-sm flex items-center gap-2"><FileText size={16} className="text-primary" /> On-device notes</h3>
               {thread.length > 0 ? (
                 <div className="mt-3 space-y-2">
                   {thread.map((m) => (
                     <div key={m.id} className={`rounded-xl border px-3 py-2 text-sm max-w-[92%] ${m.sender === 'owner' ? 'border-primary/30 bg-primary/10 ml-auto' : 'border-border bg-zinc-950'}`}>
                       <div className="text-[11px] text-muted-foreground">
-                        {m.sender === 'owner' ? 'Owner (dispatch)' : `${d.name} (driver)`} · {new Date(m.created_date).toLocaleString()}
+                        {m.sender === 'owner' ? 'Owner' : `${d.name} (driver)`} · {new Date(m.created_date).toLocaleString()}
                       </div>
                       {m.body && <div className="mt-0.5">{m.body}</div>}
                       {(m.pickup || m.dropoff || m.time || m.pay) && (
@@ -1123,7 +1132,7 @@ export default function Fleet() {
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">No dispatch messages yet. Send the first job below.</p>
+                <p className="mt-2 text-sm text-muted-foreground">No notes yet. Send the first one below.</p>
               )}
               <div className="mt-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
@@ -1134,7 +1143,7 @@ export default function Fleet() {
                       onChange={(e) => setDispatchForm((m) => ({ ...m, [d.id]: { ...dpf, sender: e.target.value } }))}
                       className={inputCls}
                     >
-                      <option value="owner">Owner (dispatch)</option>
+                      <option value="owner">Owner</option>
                       <option value="driver">Driver (reply)</option>
                     </select>
                   </div>
@@ -1188,9 +1197,9 @@ export default function Fleet() {
                   />
                 </div>
                 <button onClick={() => sendDispatch(d)} disabled={saving === 'dispatch-' + d.id} className={saveBtnCls}>
-                  {saving === 'dispatch-' + d.id ? 'Sending…' : 'Send dispatch message'}
+                  {saving === 'dispatch-' + d.id ? 'Sending…' : 'Send note'}
                 </button>
-                <p className="text-[11px] text-muted-foreground">On-device thread — messages live on this phone. For live dispatch to a driver's phone, use Live dispatch + map above.</p>
+                <p className="text-[11px] text-muted-foreground">On-device notes — messages live on this phone. For live dispatch to a driver's phone, use Live dispatch + map above.</p>
               </div>
             </div>
 
@@ -1268,7 +1277,7 @@ export default function Fleet() {
 
   return (
     <div className="min-h-screen px-5 pt-5 pb-6">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <button onClick={() => goBackOrHome(navigate)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <ArrowLeft size={15} /> Back
       </button>
       <h1 className="mt-3 font-display font-bold text-3xl flex items-center gap-2">
@@ -1332,7 +1341,7 @@ export default function Fleet() {
               <Users size={20} className="text-primary" /> Drivers
             </h2>
             {drivers.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">No driver profiles yet. Add one to keep their photo, license date, documents, and dispatch thread in one place.</p>
+              <p className="mt-2 text-sm text-muted-foreground">No driver profiles yet. Add one to keep their photo, license date, documents, and notes thread in one place.</p>
             ) : (
               <div className="mt-3 space-y-3">
                 {drivers.map(renderDriver)}
@@ -1380,12 +1389,12 @@ export default function Fleet() {
               </button>
             )}
 
-            {/* Dispatch — all threads at a glance */}
+            {/* On-device notes — all threads at a glance */}
             <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
-              <FileText size={20} className="text-primary" /> Dispatch
+              <FileText size={20} className="text-primary" /> On-device notes
             </h2>
             {drivers.length === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">Add a driver profile first, then dispatch jobs to them from their profile.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Add a driver profile first, then send notes to them from their profile.</p>
             ) : (
               <div className="mt-3 space-y-2">
                 {drivers.map((d) => {
@@ -1401,7 +1410,7 @@ export default function Fleet() {
                               {last.sender === 'owner' ? 'Owner: ' : 'Driver: '}{last.body || `${last.pickup ? `Pickup ${last.pickup}` : 'Job details'}`} · {new Date(last.created_date).toLocaleDateString()}
                             </div>
                           ) : (
-                            <div className="text-xs text-muted-foreground">No dispatch messages yet — tap to send the first job.</div>
+                            <div className="text-xs text-muted-foreground">No notes yet — tap to send the first one.</div>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground shrink-0">{dispatchFor(d.id).length} msg{dispatchFor(d.id).length === 1 ? '' : 's'}</span>

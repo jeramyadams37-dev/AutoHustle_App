@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { KeyRound, ExternalLink, Trash2, LogOut, Check, ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react';
 import { saveGeminiKey, clearGeminiKey, maskedKey, hasGeminiKey, AI_STUDIO_URL } from '@/lib/apiKeys';
 import { getCurrentAccount, signOut } from '@/lib/accounts';
+import { goBackOrHome } from '@/lib/goBack';
 import { resetTour, TOUR_START_EVENT } from '@/lib/onboardingTour';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +54,7 @@ export default function ApiKeys() {
 
   return (
     <div className="min-h-screen px-5 pt-4 pb-10">
-      <button onClick={() => navigate(-1)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3">
+      <button onClick={() => goBackOrHome(navigate)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3">
         <ArrowLeft size={18} /> Back
       </button>
       <h1 className="font-display font-bold text-3xl">API Keys</h1>

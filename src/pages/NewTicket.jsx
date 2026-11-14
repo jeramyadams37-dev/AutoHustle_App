@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Car, Plus } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { goBackOrHome } from '@/lib/goBack';
 import NoKeyNotice from '@/components/NoKeyNotice';
 
 const empty = { year: '', make: '', model: '', trim: '', engine: '', mileage: '' };
@@ -75,7 +76,7 @@ export default function NewTicket() {
 
   return (
     <div className="min-h-screen px-5 pt-4">
-      <button onClick={() => navigate(-1)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3">
+      <button onClick={() => goBackOrHome(navigate)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground mb-3">
         <ArrowLeft size={18} /> Back
       </button>
       <h1 className="font-display font-bold text-3xl">New Diagnostic Ticket</h1>

@@ -25,6 +25,7 @@ import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
 import TierGate from '@/components/TierGate';
 import { vehicleName } from '@/lib/fleet';
+import { goBackOrHome } from '@/lib/goBack';
 import {
   getFleetMembership, createFleet, validateMembership,
   sendFleetDispatch, listFleetDispatch, listFleetMembers,
@@ -308,7 +309,7 @@ export default function FleetLive() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-4">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <button onClick={() => goBackOrHome(navigate)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <ArrowLeft size={16} /> Back
       </button>
       <h1 className="mt-2 font-display text-2xl font-bold flex items-center gap-2">

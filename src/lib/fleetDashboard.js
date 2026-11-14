@@ -121,19 +121,20 @@ export function isCurrentlyDown(downList, todayISO) {
   );
 }
 
-// One vehicle's dashboard status.
-//   down       — last check says DO NOT DRIVE, or logged down now.
-//   attention  — last check was CAUTION, service overdue / due very
-//                soon, or the assigned driver's license is expired
-//                or expiring within 30 days.
-//   running    — everything else.
+// One vehicle's dashboard status — one vocabulary everywhere
+// (AH-H6): the Pre-Shift verdicts GO / CAUTION / DO NOT DRIVE.
+//   fail  — last check says DO NOT DRIVE, or logged down now.
+//   warn  — last check was CAUTION, service overdue / due very
+//           soon, or the assigned driver's license is expired
+//           or expiring within 30 days.
+//   pass  — everything else.
 // Returns { status, reasons, due }.
 export function vehicleStatus(vehicle, check, downList, driver) {
   const due = nextServiceFor(vehicle);
   const reasons = [];
   if (check && check.verdict === 'fail') reasons.push('Pre-shift check says DO NOT DRIVE');
   if (isCurrentlyDown(downList)) reasons.push('Logged as down right now');
-  if (reasons.length > 0) return { status: 'down', reasons, due };
+  if (reasons.length > 0) return { status: 'fail', reasons, due };
 
   if (check && check.verdict === 'warn') reasons.push('Last check was CAUTION');
   if (due.overdue) {
@@ -151,8 +152,8 @@ export function vehicleStatus(vehicle, check, downList, driver) {
       else if (days <= 30) reasons.push(`Driver license expires in ${days} day${days === 1 ? '' : 's'}`);
     }
   }
-  if (reasons.length > 0) return { status: 'attention', reasons, due };
-  return { status: 'running', reasons: [], due };
+  if (reasons.length > 0) return { status: 'warn', reasons, due };
+  return { status: 'pass', reasons: [], due };
 }
 
 // FleetCost spend in the current calendar month.
@@ -164,24 +165,24 @@ export function monthSpend(costs, now) {
 // Fleet-wide summary for the dashboard header.
 // soonest: { vehicle, due } for the nearest next service, or null.
 export function fleetSummary(vehicles, checks, costs, downtime, drivers) {
-  let up = 0;
-  let down = 0;
-  let attention = 0;
+  let go = 0;
+  let doNotDrive = 0;
+  let caution = 0;
   let soonest = null;
   for (const v of vehicles) {
     const check = latestCheckFor(checks, v.id);
     const dList = (downtime || []).filter((d) => d.vehicle_id === v.id);
     const driver = (drivers || []).find((d) => d.vehicle_id === v.id) || null;
     const st = vehicleStatus(v, check, dList, driver);
-    if (st.status === 'down') down += 1;
-    else if (st.status === 'attention') attention += 1;
-    else up += 1;
+    if (st.status === 'fail') doNotDrive += 1;
+    else if (st.status === 'warn') caution += 1;
+    else go += 1;
     if (st.due.kind !== 'none' && (!soonest || st.due.remaining < soonest.due.remaining)) {
       soonest = { vehicle: v, due: st.due };
     }
   }
   return {
-    up, down, attention, total: vehicles.length,
+    go, doNotDrive, caution, total: vehicles.length,
     month: monthSpend(costs), spend: sumCosts(costs), downDays: downtimeDays(downtime),
     soonest,
   };

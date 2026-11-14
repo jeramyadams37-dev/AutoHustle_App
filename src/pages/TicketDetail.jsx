@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Loader2, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { exportTicketPDF } from '@/lib/pdfExport';
+import { goBackOrHome } from '@/lib/goBack';
 import TicketHeader from '@/components/ticket/TicketHeader';
 import Flowchart from '@/components/diagrams/Flowchart';
 import BeltDiagram from '@/components/diagrams/BeltDiagram';
@@ -136,7 +137,7 @@ export default function TicketDetail() {
   return (
     <div className="min-h-screen px-4 pt-3 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => navigate(-1)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+        <button onClick={() => goBackOrHome(navigate)} className="tap-target inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
           <ArrowLeft size={18} /> Back
         </button>
         <div className="flex gap-2">

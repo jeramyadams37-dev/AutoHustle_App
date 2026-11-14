@@ -20,10 +20,13 @@ export default function OnboardingTour() {
   const navigate = useNavigate();
   // null = hidden. A number = the step being shown.
   const [step, setStep] = useState(null);
+  // AH-H10/AH-L11: where the tour started, so Skip/X can return there.
+  const [returnTo, setReturnTo] = useState('/');
 
   // First run: open step 0 when the user lands on Home.
   useEffect(() => {
     if (step === null && location.pathname === '/' && !hasCompletedTour()) {
+      setReturnTo('/');
       setStep(0);
     }
   }, [location.pathname, step]);
@@ -31,6 +34,7 @@ export default function OnboardingTour() {
   // Replay: Settings -> "Take the tour again" fires this event.
   useEffect(() => {
     const start = () => {
+      setReturnTo(location.pathname);
       if (location.pathname !== '/') navigate('/');
       setStep(0);
     };
@@ -43,10 +47,17 @@ export default function OnboardingTour() {
   const isFirst = step === 0;
   const isLast = step === TOUR_STEPS.length - 1;
 
+  // AH-H10: only explicit Skip/Finish mark done. Finish goes Home;
+  // Skip/X return to where the tour started (AH-L11) — replaying from
+  // Settings must not dump the user on Home.
   const close = (goHome) => {
     markTourComplete();
     setStep(null);
-    if (goHome && location.pathname !== '/') navigate('/');
+    if (goHome) {
+      if (location.pathname !== '/') navigate('/');
+    } else if (returnTo && returnTo !== location.pathname) {
+      navigate(returnTo);
+    }
   };
 
   const goTo = (index) => {
@@ -60,8 +71,9 @@ export default function OnboardingTour() {
       role="dialog"
       aria-label={`Onboarding tour, step ${step + 1} of ${TOUR_STEPS.length}: ${current.title}`}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70"
-      onClick={() => close(true)}
     >
+      {/* AH-H10: no onClick on the backdrop - a stray tap outside the
+          sheet must not end the tour. Only Skip/Finish close it. */}
       <div
         className="safe-bottom w-full max-w-md rounded-t-3xl border border-border bg-zinc-950 p-5 pb-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -71,7 +83,7 @@ export default function OnboardingTour() {
             Step {step + 1} of {TOUR_STEPS.length}
           </span>
           <button
-            onClick={() => close(true)}
+            onClick={() => close(false)}
             aria-label="Skip tour"
             className="tap-target -mr-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
           >
@@ -113,7 +125,7 @@ export default function OnboardingTour() {
         </div>
 
         <button
-          onClick={() => close(true)}
+          onClick={() => close(false)}
           className="tap-target mt-2 w-full text-center text-sm text-muted-foreground underline"
         >
           Skip the tour

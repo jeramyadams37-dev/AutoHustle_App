@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Loader2, Wrench, ClipboardCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { goBackOrHome } from '@/lib/goBack';
 import { readObd2Codes, readObd2LiveData, connectObd2, isObd2Available } from '@/lib/obd2';
 
 const MISFIRE_CODES = ['P0300', 'P0301', 'P0302', 'P0303', 'P0304', 'P0305', 'P0306', 'P0307', 'P0308'];
@@ -165,7 +166,7 @@ export default function PreShift() {
 
   return (
     <div className="min-h-screen px-5 pt-5 pb-6">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <button onClick={() => goBackOrHome(navigate)} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <ArrowLeft size={15} /> Back
       </button>
       <h1 className="mt-3 font-display font-bold text-3xl flex items-center gap-2">
@@ -235,7 +236,7 @@ export default function PreShift() {
         <div className="mt-4 space-y-3">
           <div className={`rounded-2xl border p-4 text-center ${verdict === 'pass' ? 'border-green-500/40 bg-green-500/10' : verdict === 'warn' ? 'border-amber-500/40 bg-amber-500/10' : 'border-red-500/40 bg-red-500/10'}`}>
             <div className="font-display font-bold text-2xl uppercase">
-              {verdict === 'pass' ? 'Go — drive' : verdict === 'warn' ? 'Caution' : 'Do not drive for work'}
+              {verdict === 'pass' ? 'GO' : verdict === 'warn' ? 'CAUTION' : 'DO NOT DRIVE'}
             </div>
             <p className="text-sm mt-1">
               {verdict === 'pass'

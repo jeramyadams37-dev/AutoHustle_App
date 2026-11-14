@@ -5,9 +5,9 @@
 // (service_miles_next / service_date_next); otherwise it is computed
 // from the per-type last-service records the owner enters here
 // (fleet_service_last); otherwise it shows as Not set.
-// Status: DOWN (last check failed, or logged down now), NEEDS
-// ATTENTION (last check was CAUTION, service overdue / due very
-// soon, or the driver's license is expired / expiring), else RUNNING.
+// Status: DO NOT DRIVE (last check failed, or logged down now),
+// CAUTION (last check was CAUTION, service overdue / due very soon,
+// or the driver's license is expired / expiring), else GO.
 // Records (all localStorage via base44 entities — same as Fleet.jsx):
 //   Vehicle, PreShiftCheck, FleetCost, FleetDowntime, FleetDriver.
 import { useEffect, useState } from 'react';
@@ -30,20 +30,20 @@ import {
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 function StatusBadge({ status }) {
-  if (status === 'down') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 text-red-400 px-2 py-0.5 text-xs font-semibold"><XCircle size={13} /> DOWN</span>;
+  if (status === 'fail') {
+    return <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 text-red-400 px-2 py-0.5 text-xs font-semibold"><XCircle size={13} /> DO NOT DRIVE</span>;
   }
-  if (status === 'attention') {
-    return <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-400 px-2 py-0.5 text-xs font-semibold"><AlertTriangle size={13} /> NEEDS ATTENTION</span>;
+  if (status === 'warn') {
+    return <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-400 px-2 py-0.5 text-xs font-semibold"><AlertTriangle size={13} /> CAUTION</span>;
   }
-  return <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 text-green-400 px-2 py-0.5 text-xs font-semibold"><CheckCircle2 size={13} /> RUNNING</span>;
+  return <span className="inline-flex items-center gap-1 rounded-full bg-green-500/15 text-green-400 px-2 py-0.5 text-xs font-semibold"><CheckCircle2 size={13} /> GO</span>;
 }
 
 function verdictWord(v) {
   return v === 'pass' ? 'GO' : v === 'warn' ? 'CAUTION' : v === 'fail' ? 'DO NOT DRIVE' : 'No check yet';
 }
 
-const STATUS_RANK = { down: 0, attention: 1, running: 2 };
+const STATUS_RANK = { fail: 0, warn: 1, pass: 2 };
 
 export default function FleetDashboard() {
   const navigate = useNavigate();
@@ -190,7 +190,7 @@ export default function FleetDashboard() {
             <StatusBadge status={status} />
           </div>
           {reasons.length > 0 && (
-            <p className={`text-xs mt-2 font-medium ${status === 'down' ? 'text-red-400' : 'text-amber-400'}`}>
+            <p className={`text-xs mt-2 font-medium ${status === 'fail' ? 'text-red-400' : 'text-amber-400'}`}>
               {reasons.join(' · ')}
             </p>
           )}
@@ -362,18 +362,18 @@ export default function FleetDashboard() {
             <div className="grid grid-cols-3 gap-2 mt-5 text-center">
               <div className="rounded-2xl border border-border bg-card p-3">
                 <CheckCircle2 size={18} className="mx-auto text-green-400" />
-                <div className="font-display font-bold text-xl mt-1">{summary.up}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Running</div>
+                <div className="font-display font-bold text-xl mt-1">{summary.go}</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">GO</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <XCircle size={18} className="mx-auto text-red-400" />
-                <div className="font-display font-bold text-xl mt-1">{summary.down}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Down</div>
+                <div className="font-display font-bold text-xl mt-1">{summary.doNotDrive}</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">DO NOT DRIVE</div>
               </div>
               <div className="rounded-2xl border border-border bg-card p-3">
                 <AlertTriangle size={18} className="mx-auto text-amber-400" />
-                <div className="font-display font-bold text-xl mt-1">{summary.attention}</div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">Attention</div>
+                <div className="font-display font-bold text-xl mt-1">{summary.caution}</div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wide">CAUTION</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">
