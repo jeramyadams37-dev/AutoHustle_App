@@ -65,7 +65,7 @@ function UpcomingServicesList({ upcoming }) {
       {upcoming.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">
           No services scheduled.{' '}
-          <Link to="/service-scheduler" className="text-primary">Schedule one from the Service scheduler</Link> — your first one is free.
+          <Link to="/service-scheduler" className="text-primary">Schedule one from the Service scheduler</Link> — your first scheduled one is free.
         </p>
       ) : (
         <div className="mt-3 space-y-2">

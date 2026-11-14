@@ -17,7 +17,7 @@ const PLANS = [
     blurb: 'For drivers who want the full mechanic in their pocket.',
     features: [
       'Parts prices, nearby stores & labor on every ticket',
-      'Unlimited scheduled services + the upcoming-services list — your first service is free',
+      'Unlimited scheduled services + the upcoming-services list — your first scheduled service is free',
     ],
   },
   {

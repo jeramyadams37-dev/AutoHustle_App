@@ -239,6 +239,46 @@ export function upcomingServices(vehicles, nowMs, todayISO) {
   return rows;
 }
 
+// Due-service reminders (FREE for all tiers — wording + reminder
+// patch, 2026-11-14). A reminder fires for any still-scheduled
+// service whose date is today or past (state 'overdue' covers
+// date-past AND mileage-past; date === today is the 'due today'
+// case, which serviceScheduleStatus reports as 'due-soon'). Future,
+// done, cancelled, and no-date services never remind. No tier is
+// involved anywhere on this path — the reminder fires for the free
+// first service too, which is the point: the user sees the value.
+// Sorted most urgent first by upcomingServices().
+export function dueServiceReminders(vehicles, nowMs, todayISO) {
+  const now = nowMs === undefined ? Date.now() : nowMs;
+  const today = todayISO || new Date(now).toISOString().slice(0, 10);
+  return upcomingServices(vehicles, nowMs, todayISO).filter(
+    (r) => r.status.state === 'overdue' || r.item.date === today,
+  );
+}
+
+// "Not now" dismissal — hides ONE service until tomorrow. The flag
+// is date-keyed in localStorage: dismissing today hides it today
+// only; it reappears tomorrow until the service is done. `storage`
+// is injectable so tests can pass a fake store; in the app it
+// defaults to localStorage (and no-ops where storage is absent).
+export const DUE_REMINDER_DISMISS_KEY = 'ah_due_reminder_dismissed_v1:';
+
+export function isDueReminderDismissed(itemId, today, storage) {
+  const store = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!store) return false;
+  try {
+    return store.getItem(DUE_REMINDER_DISMISS_KEY + itemId) === today;
+  } catch { return false; }
+}
+
+export function dismissDueReminder(itemId, today, storage) {
+  const store = storage || (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!store) return;
+  try {
+    store.setItem(DUE_REMINDER_DISMISS_KEY + itemId, today);
+  } catch { /* storage full/blocked — the card just shows again */ }
+}
+
 // Mark a scheduled service done. Returns the two patches to save
 // on the Vehicle, or null when the item is not found / not
 // schedulable anymore:

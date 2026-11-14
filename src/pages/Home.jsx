@@ -4,6 +4,7 @@ import { Wrench, PlusCircle, SearchCode, Car, ArrowRight, Zap, ListChecks, Messa
 import { base44 } from '@/api/base44Client';
 
 import { getCurrentAccount, signOut } from '@/lib/accounts';
+import DueServiceReminder from '@/components/DueServiceReminder';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -110,6 +111,13 @@ export default function Home() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Due-service reminder — free for all tiers. Renders
+          nothing when no scheduled service is due today or
+          overdue, so Home is unchanged on a normal day. */}
+      <div className="px-5 pb-4">
+        <DueServiceReminder />
       </div>
 
       {/* Recent tickets */}
