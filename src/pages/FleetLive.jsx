@@ -19,7 +19,7 @@
 // trail, no history — and deletes it the moment they go off duty.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Radio, MapPin, Users, Send, Copy, RefreshCw, Loader2, Truck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Radio, MapPin, Users, Send, Copy, RefreshCw, Loader2, Truck, Trash2, Clock } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { base44 } from '@/api/base44Client';
@@ -30,6 +30,7 @@ import {
   sendFleetDispatch, listFleetDispatch, listFleetMembers,
   listFleetLocations, setFleetVehicle, removeFleetMember,
   regenerateFleetCode, fleetLocationMapsUrl, timeAgo,
+  scheduleFleetDispatch, listScheduledDispatch, cancelScheduledDispatch,
 } from '@/lib/fleetRealtime';
 import { registerPushTokenForFleet, getFleetPushState } from '@/lib/fleetPush';
 
@@ -57,6 +58,14 @@ export default function FleetLive() {
   const [form, setForm] = useState({
     toMemberId: '', body: '', pickup: '', dropoff: '', time: '', pay: '',
   });
+  // Scheduled dispatch: same job fields as a live dispatch, plus
+  // a future date/time. The backend holds it and delivers it on
+  // the next poll after that time (sweep on read — no scheduler).
+  const [scheduled, setScheduled] = useState([]);
+  const [schedForm, setSchedForm] = useState({
+    toMemberId: '', body: '', pickup: '', dropoff: '', time: '', pay: '', deliverAt: '',
+  });
+  const [scheduling, setScheduling] = useState(false);
   const sinceIdRef = useRef(0);
   const membershipRef = useRef(membership);
   membershipRef.current = membership;
@@ -110,8 +119,20 @@ export default function FleetLive() {
     }
   };
 
+  // Scheduled list. Reading it also runs the server sweep, so a
+  // due row is delivered (and shows up in the live list) by this
+  // very call — refreshDispatch right after picks it up.
+  const refreshScheduled = async () => {
+    try {
+      const out = await listScheduledDispatch();
+      setScheduled(out.scheduled || []);
+    } catch (e) {
+      setError(e.message || 'Could not load scheduled dispatch.');
+    }
+  };
+
   const refreshAll = async () => {
-    await Promise.all([refreshMembers(), refreshLocations(), refreshDispatch()]);
+    await Promise.all([refreshMembers(), refreshLocations(), refreshDispatch(), refreshScheduled()]);
   };
 
   // Boot: validate the stored membership, then start polling.
@@ -150,7 +171,8 @@ export default function FleetLive() {
     const d = setInterval(refreshDispatch, DISPATCH_POLL_MS);
     const l = setInterval(refreshLocations, LOCATION_POLL_MS);
     const m = setInterval(refreshMembers, LOCATION_POLL_MS);
-    return () => { clearInterval(d); clearInterval(l); clearInterval(m); };
+    const s = setInterval(async () => { await refreshScheduled(); await refreshDispatch(); }, LOCATION_POLL_MS);
+    return () => { clearInterval(d); clearInterval(l); clearInterval(m); clearInterval(s); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membership]);
 
@@ -195,6 +217,46 @@ export default function FleetLive() {
       setError(e.message || 'Could not send the dispatch.');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (!schedForm.body.trim() || !schedForm.deliverAt) return;
+    const deliverAtMs = Date.parse(schedForm.deliverAt);
+    if (Number.isNaN(deliverAtMs) || deliverAtMs <= Date.now()) {
+      setError('Pick a future date and time for the delivery.');
+      return;
+    }
+    setScheduling(true);
+    setError('');
+    try {
+      await scheduleFleetDispatch({
+        body: schedForm.body.trim(),
+        toMemberId: schedForm.toMemberId || null,
+        job: {
+          pickup: schedForm.pickup.trim() || null,
+          dropoff: schedForm.dropoff.trim() || null,
+          time: schedForm.time.trim() || null,
+          pay: schedForm.pay.trim() || null,
+        },
+        deliverAt: new Date(deliverAtMs).toISOString(),
+      });
+      setSchedForm({ toMemberId: schedForm.toMemberId, body: '', pickup: '', dropoff: '', time: '', pay: '', deliverAt: '' });
+      await refreshScheduled();
+    } catch (e) {
+      setError(e.message || 'Could not schedule the dispatch.');
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const handleCancelScheduled = async (row) => {
+    if (!window.confirm(`Cancel this scheduled dispatch ("${row.body.slice(0, 60)}")?`)) return;
+    try {
+      await cancelScheduledDispatch(row.id);
+      await refreshScheduled();
+    } catch (e) {
+      setError(e.message || 'Could not cancel that dispatch.');
     }
   };
 
@@ -448,6 +510,11 @@ export default function FleetLive() {
                       {msg.fromRole === 'owner' ? 'You' : msg.fromName}
                       {msg.toMemberId ? ' → driver' : ' → all drivers'}
                       {' · '}{new Date(msg.createdAt).toLocaleString()}
+                      {msg.scheduledDispatchId ? (
+                        <span className="ml-1 inline-flex items-center rounded-full bg-blue-500/15 text-blue-400 px-2 py-0.5 text-[11px]">
+                          Scheduled{msg.scheduledFor ? ` for ${new Date(msg.scheduledFor).toLocaleString()}` : ''}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-1 text-sm">{msg.body}</div>
                     {(msg.job?.pickup || msg.job?.dropoff || msg.job?.time || msg.job?.pay) && (
@@ -495,6 +562,100 @@ export default function FleetLive() {
               >
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 {sending ? 'Sending…' : 'Send dispatch'}
+              </button>
+            </div>
+
+            {/* Scheduled dispatch — same job, delivered later */}
+            <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
+              <Clock size={20} className="text-primary" /> Scheduled dispatch
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Set a job for a future date and time. The backend holds it and delivers it then — a push lands on the
+              driver&apos;s phone exactly like a live dispatch, with the 10s polling as backup. No Cloud Scheduler:
+              delivery happens on the next poll after the time you set, so it can land up to ~10s late. Cancel it
+              any time before it goes out.
+            </p>
+            <div className="mt-3 space-y-2">
+              {scheduled.filter((r) => r.status === 'scheduled').length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nothing scheduled — set the first one below.</p>
+              ) : (
+                scheduled.filter((r) => r.status === 'scheduled').map((row) => (
+                  <div key={row.id} className="rounded-2xl border border-blue-500/40 bg-blue-500/10 px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs text-muted-foreground">
+                          {row.fromName}{row.toMemberId ? ' → driver' : ' → all drivers'}
+                          {' · '}Delivers {new Date(row.deliverAt).toLocaleString()}
+                        </div>
+                        <div className="mt-1 text-sm">{row.body}</div>
+                        {(row.job?.pickup || row.job?.dropoff || row.job?.time || row.job?.pay) && (
+                          <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
+                            {row.job.pickup && <div>Pickup: {row.job.pickup}</div>}
+                            {row.job.dropoff && <div>Drop-off: {row.job.dropoff}</div>}
+                            {row.job.time && <div>Time: {row.job.time}</div>}
+                            {row.job.pay && <div>Pay: {row.job.pay}</div>}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleCancelScheduled(row)}
+                        className="tap-target shrink-0 inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs"
+                      >
+                        <Trash2 size={14} /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+              {scheduled.filter((r) => r.status === 'delivered').slice(-5).map((row) => (
+                <div key={`done-${row.id}`} className="rounded-2xl border border-border bg-card px-4 py-3">
+                  <div className="text-xs text-muted-foreground">
+                    Delivered {row.deliveredAt ? new Date(row.deliveredAt).toLocaleString() : ''} (was scheduled for {new Date(row.deliverAt).toLocaleString()})
+                  </div>
+                  <div className="mt-1 text-sm">{row.body}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4 space-y-2">
+              <label className="block text-xs text-muted-foreground">Send to</label>
+              <select
+                value={schedForm.toMemberId}
+                onChange={(e) => setSchedForm({ ...schedForm, toMemberId: e.target.value })}
+                className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm"
+              >
+                <option value="">All drivers</option>
+                {drivers.map((d) => (
+                  <option key={d.memberId} value={d.memberId}>{d.displayName}</option>
+                ))}
+              </select>
+              <textarea
+                value={schedForm.body}
+                onChange={(e) => setSchedForm({ ...schedForm, body: e.target.value })}
+                rows={2}
+                placeholder="Job details — what the driver needs to know"
+                className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={schedForm.pickup} onChange={(e) => setSchedForm({ ...schedForm, pickup: e.target.value })} placeholder="Pickup" className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm" />
+                <input value={schedForm.dropoff} onChange={(e) => setSchedForm({ ...schedForm, dropoff: e.target.value })} placeholder="Drop-off" className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm" />
+                <input value={schedForm.time} onChange={(e) => setSchedForm({ ...schedForm, time: e.target.value })} placeholder="Time" className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm" />
+                <input value={schedForm.pay} onChange={(e) => setSchedForm({ ...schedForm, pay: e.target.value })} placeholder="Pay" className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm" />
+              </div>
+              <label className="block text-xs text-muted-foreground">Deliver at (date + time)</label>
+              <input
+                type="datetime-local"
+                value={schedForm.deliverAt}
+                onChange={(e) => setSchedForm({ ...schedForm, deliverAt: e.target.value })}
+                className="tap-target w-full rounded-xl border border-border bg-zinc-950 px-3 py-2.5 text-sm"
+              />
+              <button
+                onClick={handleSchedule}
+                disabled={scheduling || !schedForm.body.trim() || !schedForm.deliverAt}
+                className="tap-target w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-primary py-3 font-display font-bold uppercase tracking-wide text-sm text-primary-foreground disabled:opacity-50"
+              >
+                {scheduling ? <Loader2 size={16} className="animate-spin" /> : <Clock size={16} />}
+                {scheduling ? 'Scheduling…' : 'Schedule dispatch'}
               </button>
             </div>
 

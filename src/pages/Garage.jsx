@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Car, Plus, Wrench, ArrowRight, Loader2 } from 'lucide-react';
+import { Car, Plus, Wrench, ArrowRight, Loader2, CalendarClock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 export default function Garage() {
@@ -31,6 +31,9 @@ export default function Garage() {
           <Plus size={18} /> New
         </Link>
       </div>
+      <Link to="/service-scheduler" className="tap-target mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-zinc-950 py-3 font-display font-bold uppercase tracking-wide text-sm">
+        <CalendarClock size={16} /> Scheduled services
+      </Link>
 
       {loading ? (
         <div className="mt-16 flex justify-center"><Loader2 className="text-primary animate-spin" /></div>

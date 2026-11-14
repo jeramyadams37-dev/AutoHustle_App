@@ -23,6 +23,9 @@ import {
   SERVICE_TYPES, serviceTypeLabel, parseServiceLast,
   nextServiceFor, vehicleStatus, fleetSummary,
 } from '@/lib/fleetDashboard';
+import {
+  scheduledServiceTypeLabel, upcomingServices,
+} from '@/lib/fleetScheduling';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -76,6 +79,10 @@ export default function FleetDashboard() {
   useEffect(() => { load(); }, []);
 
   const summary = fleetSummary(vehicles, checks, costs, downtime, drivers);
+  // Scheduled services across all vehicles, most urgent first
+  // (overdue, then due soon). Same rows the Service Scheduler
+  // page manages — this is the fleet-wide view of them.
+  const upcoming = upcomingServices(vehicles);
 
   // Per-vehicle view model, sorted most urgent first.
   const rows = vehicles.map((v) => {
@@ -386,6 +393,42 @@ export default function FleetDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Upcoming scheduled services — fleet-wide view of the
+                Service Scheduler (garage-level, works with no fleet).
+                Overdue red, due within 7 days / 500 mi amber. */}
+            <h2 className="mt-6 font-display font-bold text-xl flex items-center gap-2">
+              <CalendarClock size={20} className="text-primary" /> Upcoming scheduled services
+            </h2>
+            {upcoming.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No services scheduled.{' '}
+                <Link to="/service-scheduler" className="text-primary">Schedule one from the Service scheduler</Link> — it works for every vehicle, fleet or not.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {upcoming.map(({ vehicle, item, status }) => (
+                  <div key={item.id} className={`rounded-2xl border px-4 py-3 ${status.state === 'overdue' ? 'border-red-500/40 bg-red-500/10' : status.state === 'due-soon' ? 'border-amber-500/40 bg-amber-500/10' : 'border-border bg-card'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-display font-semibold text-sm">
+                          {scheduledServiceTypeLabel(item.type, item.customLabel)} — {vehicleName(vehicle)}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{status.label}</div>
+                        {(item.shop || item.costEstimate) && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {item.shop || ''}{item.shop && item.costEstimate ? ' · ' : ''}{item.costEstimate ? `est. ${fmtMoney(item.costEstimate)}` : ''}
+                          </div>
+                        )}
+                      </div>
+                      <Link to={`/service-scheduler?vehicle=${vehicle.id}`} className="tap-target shrink-0 inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs">
+                        <Wrench size={14} /> Manage
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-5 space-y-4">
               {rows.map(renderRow)}

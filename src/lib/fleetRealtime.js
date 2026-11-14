@@ -18,6 +18,15 @@
 // OFFLINE: if there is no backend address or the fetch fails, the
 // caller gets a thrown error — the Fleet page's on-device dispatch
 // (from the fleet-contracts package) still works and is the fallback.
+//
+// SCHEDULED DISPATCH: the owner schedules a dispatch for a future
+// date/time (scheduleFleetDispatch). The backend holds the row and
+// delivers it on the next read after that time (a sweep inside
+// listFleetDispatch / listScheduledDispatch — no Cloud Scheduler,
+// no timer, no new infrastructure), pushed via FCM exactly like
+// a live dispatch, with the 10s polling as backup. A delivered
+// scheduled dispatch carries scheduledDispatchId + scheduledFor
+// so the driver can tell it from a live one.
 import { getCurrentAccountId, getCurrentAccount } from './accounts.js';
 
 // Default backend address. public/fleet-config.json (written by the
@@ -156,6 +165,45 @@ export async function listFleetDispatch(sinceId) {
     memberToken: m.memberToken,
     sinceId: sinceId || 0,
     limit: 100,
+  });
+}
+
+// --- Scheduled dispatch (owner schedules, backend delivers) ------
+// deliverAt is an ISO date-time string in the future. The backend
+// holds the row and delivers it on the next read after deliverAt
+// (sweep on read) — pushed like a live dispatch, polling as backup.
+// Only the owner can schedule / cancel (the backend enforces it);
+// the driver's read side (listScheduledDispatch) shows them theirs.
+export async function scheduleFleetDispatch({ body, toMemberId, job, deliverAt }) {
+  const m = getFleetMembership();
+  if (!m) throw new Error('No fleet yet — create your fleet first.');
+  return callFleetAction('fleetScheduleDispatch', {
+    memberToken: m.memberToken,
+    body,
+    toMemberId: toMemberId || null,
+    pickup: job?.pickup || null,
+    dropoff: job?.dropoff || null,
+    time: job?.time || null,
+    pay: job?.pay || null,
+    deliverAt,
+  });
+}
+
+export async function listScheduledDispatch() {
+  const m = getFleetMembership();
+  if (!m) return { scheduled: [] };
+  return callFleetAction('fleetListScheduledDispatch', {
+    memberToken: m.memberToken,
+    limit: 100,
+  });
+}
+
+export async function cancelScheduledDispatch(id) {
+  const m = getFleetMembership();
+  if (!m) throw new Error('No fleet yet — create your fleet first.');
+  return callFleetAction('fleetCancelScheduledDispatch', {
+    memberToken: m.memberToken,
+    id,
   });
 }
 

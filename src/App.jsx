@@ -28,6 +28,7 @@ import Fleet from '@/pages/Fleet';
 import { initFleetPush } from '@/lib/fleetPush';
 import FleetLive from '@/pages/FleetLive';
 import FleetDashboard from '@/pages/FleetDashboard';
+import ServiceScheduler from '@/pages/ServiceScheduler';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet-live" element={<FleetLive />} />
           <Route path="/fleet-dashboard" element={<FleetDashboard />} />
+          <Route path="/service-scheduler" element={<ServiceScheduler />} />
           <Route path="/settings" element={<ApiKeys />} />
         </Route>
       </Route>
