@@ -140,6 +140,15 @@ export default function ApiKeys() {
         </span>
       </Link>
 
+      {/* Terms & Disclaimer */}
+      <Link to="/terms" className="mt-4 rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
+        <ShieldCheck size={18} className="text-primary shrink-0" />
+        <span>
+          <span className="font-display font-semibold uppercase tracking-wide text-xs">Terms &amp; Disclaimer</span>
+          <span className="block text-sm text-muted-foreground mt-0.5">What AutoHustle is (and is not), and the limits of liability for diagnostics, guidance and repairs.</span>
+        </span>
+      </Link>
+
       {/* Tour replay */}
       <button onClick={handleReplayTour} className="mt-4 w-full rounded-2xl border border-border bg-card p-4 flex items-center gap-3 text-left">
         <ArrowRight size={18} className="text-primary shrink-0" />

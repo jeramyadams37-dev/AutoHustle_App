@@ -23,6 +23,7 @@ import Codes from '@/pages/Codes';
 import Scan from '@/pages/Scan';
 import PreShift from '@/pages/PreShift';
 import Subscribe from '@/pages/Subscribe';
+import Terms from '@/pages/Terms';
 import ApiKeys from '@/pages/ApiKeys';
 import Fleet from '@/pages/Fleet';
 import { initFleetPush } from '@/lib/fleetPush';
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
           <Route path="/scan" element={<Scan />} />
           <Route path="/pre-shift" element={<PreShift />} />
           <Route path="/subscribe" element={<Subscribe />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/fleet" element={<Fleet />} />
           <Route path="/fleet-live" element={<FleetLive />} />
           <Route path="/fleet-dashboard" element={<FleetDashboard />} />

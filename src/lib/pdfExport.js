@@ -1,5 +1,25 @@
 import { jsPDF } from 'jspdf';
 
+// Short liability clause, stamped on the footer of every page of every
+// shop-ticket PDF. Double-quoted on purpose: the clause contains an
+// apostrophe ("vehicle's") — a single-quoted string would break the build.
+const DISCLAIMER_FOOTER =
+  "AutoHustle is an informational tool, not a substitute for a qualified mechanic. Verify all specifications with your vehicle's manufacturer manual. Use at your own risk — no liability is assumed for any repair, damage, injury, or cost.";
+
+function addDisclaimerFooter(doc) {
+  const pages = doc.getNumberOfPages();
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    const wrapped = doc.splitTextToSize(DISCLAIMER_FOOTER, W - 72);
+    wrapped.forEach((w, idx) => doc.text(w, 36, H - 30 + idx * 9));
+  }
+}
+
 // Builds a clean text-based PDF of the full shop ticket.
 export async function exportTicketPDF(ticket) {
   const d = ticket.ticket_data || {};
@@ -19,7 +39,9 @@ export async function exportTicketPDF(ticket) {
       .replace(/\s*\[Torque:\s*(N\/?A|none|-|—)?\s*\]/gi, '');
     const wrapped = doc.splitTextToSize(text, W - 72);
     wrapped.forEach((w) => {
-      if (y > 760) { doc.addPage(); y = 48; }
+      // 740 (not 760) leaves the bottom of the page clear for the
+      // disclaimer footer stamped by addDisclaimerFooter.
+      if (y > 740) { doc.addPage(); y = 48; }
       doc.text(w, 36, y); y += size + 4;
     });
   };
@@ -120,6 +142,7 @@ export async function exportTicketPDF(ticket) {
       }
     }
   } catch (e) { /* skip pricing section if unreadable */ }
+  addDisclaimerFooter(doc);
   const dt = new Date(ticket.created_date || Date.now());
   const ymd = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
   const veh = String(h.vehicle_summary || ticket.vehicle_summary || 'ticket').split(',')[0]

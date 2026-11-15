@@ -3,6 +3,7 @@
 // "Check my plan" — the backend asks Stripe live and unlocks the tier.
 // No code, no restart, no Play Store.
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getCurrentAccount } from '@/lib/accounts';
 import { useTier, clearTierCache, PLUS_CHECKOUT_URL, PRO_CHECKOUT_URL } from '@/lib/subscription';
 import { Crown, Check, RefreshCw, Wrench } from 'lucide-react';
@@ -70,6 +71,11 @@ export default function Subscribe() {
       <p className="mt-2 text-muted-foreground text-[15px] leading-relaxed">
         Stop guessing. Know before you go. Subscribe to unlock the full mechanic — billed
         monthly by Stripe, cancel anytime.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        By subscribing you agree to the{' '}
+        <Link to="/terms" className="text-primary font-medium underline">Terms &amp; Disclaimer</Link>
+        .
       </p>
 
       {/* Current plan */}
