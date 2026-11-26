@@ -4,6 +4,7 @@ import { Wrench, PlusCircle, SearchCode, Car, ArrowRight, Zap, ListChecks, Messa
 import { base44 } from '@/api/base44Client';
 
 import { getCurrentAccount, signOut } from '@/lib/accounts';
+import { PLUS_CHECKOUT_URL } from '@/lib/subscription';
 import DueServiceReminder from '@/components/DueServiceReminder';
 
 export default function Home() {
@@ -80,6 +81,16 @@ export default function Home() {
               <span className="font-display font-semibold uppercase text-sm tracking-wide">Subscribe — Plus / Pro</span>
               <span className="text-xs text-muted-foreground">Plus $10/mo · Pro $30/mo — unlock PartsFinder and more</span>
             </Link>
+            {/* Lifetime pass: opens Plus checkout, where the code is entered
+                at Stripe — the code itself lives in Stripe, never in the app. */}
+            <a
+              href={PLUS_CHECKOUT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="tap-target col-span-2 text-center text-sm font-medium text-primary underline"
+            >
+              Have a lifetime pass code? Redeem it
+            </a>
             <Link to="/fleet" className="tap-target col-span-2 rounded-2xl border border-border bg-card p-4 flex flex-col gap-1 hover:border-primary/40 transition">
               <Truck size={20} className="text-primary" />
               <span className="font-display font-semibold uppercase text-sm tracking-wide">Owner Fleet — Pro</span>
